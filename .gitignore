@@ -1,3 +1,6 @@
-myenv/
 .env
+myenv/
+venv/
 __pycache__/
+.cache/
+temp_docs/

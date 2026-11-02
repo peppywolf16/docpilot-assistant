@@ -1,0 +1,392 @@
+{
+  "timestamp": "20261102_162028",
+  "summary": {
+    "hit@k": 0.0,
+    "mrr": 0.0,
+    "correct_refusals": 1.0,
+    "answer_fidelity": 0.9412,
+    "p50_latency_sec": 0.001
+  },
+  "detailed_results": [
+    {
+      "id": "q01",
+      "type": "lookup",
+      "split": "dev",
+      "question": "What is the command to run the FastAPI development server?",
+      "gold_doc": "first-steps.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        22,
+        21,
+        19,
+        28
+      ],
+      "latency_sec": 0.016,
+      "answer": "To run the FastAPI development server, you can use the command:\n\n```console\nuv run fastapi dev\n```\n[3]\n\nAlternatively, you can also pass a file path or the `--entrypoint` option to the `fastapi dev` command (for example, `uv run fastapi dev main.py` or `uv run fastapi dev --entrypoint main:app`) [4]."
+    },
+    {
+      "id": "q02",
+      "type": "lookup",
+      "split": "dev",
+      "question": "What Python HTTP methods are supported in FastAPI path operations?",
+      "gold_doc": "first-steps.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        33,
+        31,
+        32,
+        36
+      ],
+      "latency_sec": 0.0,
+      "answer": "Based on the provided documents, the decorators for the HTTP methods supported/used as path operations include:\n\n* `@app.get()` [3]\n* `@app.post()` [3]\n* `@app.put()` [1, 3]\n* `@app.delete()` [1, 3]\n* `@app.options()` [1, 3]\n* `@app.head()` [1, 3]\n* `@app.patch()` [1, 3]\n* `@app.trace()` [1, 3]"
+    },
+    {
+      "id": "q03",
+      "type": "lookup",
+      "split": "dev",
+      "question": "What characters separate query parameters in a URL?",
+      "gold_doc": "query-params.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        49,
+        54,
+        50,
+        52
+      ],
+      "latency_sec": 0.002,
+      "answer": "Query parameters in a URL are separated by `&` characters [1]."
+    },
+    {
+      "id": "q04",
+      "type": "lookup",
+      "split": "dev",
+      "question": "What happens if a path parameter is declared as an int but the user sends a string?",
+      "gold_doc": "path-params.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        39,
+        38,
+        40,
+        47
+      ],
+      "latency_sec": 0.0,
+      "answer": "If a path parameter is declared as an `int` and the user sends a string (such as `\"foo\"`), FastAPI returns an HTTP error detailing that the input should be a valid integer and that the string was unable to be parsed as an integer [1]. The same error occurs if a `float` is provided instead of an `int` [1]."
+    },
+    {
+      "id": "q05",
+      "type": "lookup",
+      "split": "test",
+      "question": "What is the default value of a query parameter if it has = None?",
+      "gold_doc": "query-params.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        50,
+        51,
+        53,
+        55
+      ],
+      "latency_sec": 0.0,
+      "answer": "If a query parameter's default is set to `None`, it will be `None` by default [1, 2]."
+    },
+    {
+      "id": "q06",
+      "type": "lookup",
+      "split": "test",
+      "question": "What is a path in a URL according to FastAPI docs?",
+      "gold_doc": "first-steps.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        31,
+        47,
+        40,
+        30
+      ],
+      "latency_sec": 0.002,
+      "answer": "According to the FastAPI docs, a \"path\" refers to the last part of the URL starting from the first `/` [4]. It is also commonly called an \"endpoint\" or a \"route\" [1, 4]."
+    },
+    {
+      "id": "q07",
+      "type": "how_to",
+      "split": "dev",
+      "question": "How do you declare a request body in FastAPI using Pydantic?",
+      "gold_doc": "body.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        20,
+        19,
+        21,
+        22
+      ],
+      "latency_sec": 0.0,
+      "answer": "To declare a request body, you use Pydantic models [2]. Specifically, you first import `BaseModel` from `pydantic`, declare your data model as a class that inherits from `BaseModel` using standard Python types for all the attributes, and then add it to your *path operation* by declaring it as a parameter with its type set to the created model [1, 3]."
+    },
+    {
+      "id": "q08",
+      "type": "how_to",
+      "split": "dev",
+      "question": "How can you define predefined valid values for a path parameter using Enum?",
+      "gold_doc": "path-params.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        43,
+        44,
+        45,
+        55
+      ],
+      "latency_sec": 0.0,
+      "answer": "To define predefined valid values for a path parameter using `Enum`, you can follow these steps:\n\n1. Import `Enum` and create a sub-class that inherits from both `str` and `Enum` [1]. (Inheriting from `str` allows the API docs to know the values must be of type `string` and render them correctly) [1].\n2. Create class attributes with fixed values, which represent the available valid values [1].\n3. Create a *path parameter* with a type annotation using the enum class you created [2]."
+    },
+    {
+      "id": "q09",
+      "type": "how_to",
+      "split": "dev",
+      "question": "How do you declare a path parameter that contains a file path like /files/{file_path:path}?",
+      "gold_doc": "path-params.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        47,
+        46,
+        43,
+        37
+      ],
+      "latency_sec": 0.004,
+      "answer": "To declare a path parameter containing a path, you can use an option directly from Starlette by declaring a *path parameter* with `:path` appended to it, using a URL like `/files/{file_path:path}` [1]."
+    },
+    {
+      "id": "q10",
+      "type": "how_to",
+      "split": "test",
+      "question": "How do you define multiple models to filter out password fields from output responses?",
+      "gold_doc": "extra-models.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        28,
+        32,
+        33,
+        36
+      ],
+      "latency_sec": 0.0,
+      "answer": "To handle multiple models (such as an input model with a password, an output model without a password, and a database model with a hashed password), you can use multiple Pydantic models and inherit freely for each case [1, 4]. \n\nSpecifically, you can declare a base model (such as `UserBase`) and then create subclasses that inherit its attributes (type declarations, validation, etc.), allowing you to declare just the differences between the models (such as including a plaintext `password`, a `hashed_password`, or no password at all) [3]."
+    },
+    {
+      "id": "q11",
+      "type": "how_to",
+      "split": "test",
+      "question": "How do you declare query parameters that are optional without using Optional from typing?",
+      "gold_doc": "query-params.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        51,
+        53,
+        50,
+        55
+      ],
+      "latency_sec": 0.0,
+      "answer": "To declare optional query parameters without using `Optional` from `typing`, you can set their default value to `None` [1, 3]."
+    },
+    {
+      "id": "q12",
+      "type": "multi_doc",
+      "split": "dev",
+      "question": "How does FastAPI differentiate between a path parameter, a query parameter, and a request body in the same function?",
+      "gold_doc": "body.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        26,
+        25,
+        52,
+        27
+      ],
+      "latency_sec": 0.004,
+      "answer": "FastAPI recognizes function parameters based on their declaration and type [1, 2]:\n\n* **Path parameters:** If the parameter is also declared in the path, it will be recognized and taken from the path [1, 2].\n* **Query parameters:** If the parameter is of a singular type (such as `int`, `float`, `str`, `bool`, etc.), it will be interpreted as a query parameter [1].\n* **Request body:** If the parameter is declared to be of the type of a Pydantic model, it will be interpreted as a request body [1, 2]."
+    },
+    {
+      "id": "q13",
+      "type": "multi_doc",
+      "split": "dev",
+      "question": "Can you declare body parameters, path parameters, and query parameters all at the same time in FastAPI?",
+      "gold_doc": "body.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        25,
+        52,
+        26,
+        27
+      ],
+      "latency_sec": 0.002,
+      "answer": "Yes, you can declare body, path, and query parameters all at the same time in FastAPI, and FastAPI will recognize each of them and take the data from the correct place [1]."
+    },
+    {
+      "id": "q14",
+      "type": "multi_doc",
+      "split": "dev",
+      "question": "What interactive documentation tools does FastAPI automatically provide for path operations and models?",
+      "gold_doc": "first-steps.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        40,
+        26,
+        24,
+        41
+      ],
+      "latency_sec": 0.0,
+      "answer": "Based on the provided documents, FastAPI automatically provides the following interactive documentation systems:\n\n* **Swagger UI** (integrated at `http://127.0.0.1:8000/docs`) [1, 3]\n* **ReDoc** (provided as an alternative automatic documentation at `http://127.0.0.1:8000/redoc`) [3, 4]"
+    },
+    {
+      "id": "q15",
+      "type": "multi_doc",
+      "split": "test",
+      "question": "What data validation library powers both path parameter conversion and request bodies in FastAPI?",
+      "gold_doc": "body.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        41,
+        38,
+        39,
+        22
+      ],
+      "latency_sec": 0.0,
+      "answer": "Based on the provided documents, all the data validation is performed under the hood by **Pydantic** [1]."
+    },
+    {
+      "id": "q16",
+      "type": "source_specific",
+      "split": "dev",
+      "question": "In extra-models.md, what is the purpose of the UserIn and UserOut models?",
+      "gold_doc": "extra-models.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correctly answered",
+      "retrieved_docs": [
+        28,
+        32,
+        29,
+        31
+      ],
+      "latency_sec": 0.002,
+      "answer": "Based on the provided passages, the purpose of the models involves the following requirements for user models:\n* The **input model** needs to be able to have a password [1].\n* The **output model** should not have a password [1]."
+    },
+    {
+      "id": "q17",
+      "type": "source_specific",
+      "split": "dev",
+      "question": "In first-steps.md, what is the exact JSON returned by the default root path operation?",
+      "gold_doc": "first-steps.md",
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": false,
+      "abstention_reason": "False refusal on answerable question",
+      "retrieved_docs": [
+        34,
+        46,
+        26,
+        32
+      ],
+      "latency_sec": 0.0,
+      "answer": "I don't have enough information in the provided documents."
+    },
+    {
+      "id": "q18",
+      "type": "unanswerable",
+      "split": "dev",
+      "question": "How do you configure WebSockets with Redis PubSub in FastAPI?",
+      "gold_doc": null,
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correct refusal",
+      "retrieved_docs": [
+        21,
+        22,
+        27,
+        23
+      ],
+      "latency_sec": 1.783,
+      "answer": "I don't have enough information in the provided documents."
+    },
+    {
+      "id": "q19",
+      "type": "unanswerable",
+      "split": "dev",
+      "question": "What is quantum computing and how do qubits work?",
+      "gold_doc": null,
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correct refusal",
+      "retrieved_docs": [
+        21,
+        30,
+        54,
+        33
+      ],
+      "latency_sec": 1.971,
+      "answer": "I don't have enough information in the provided documents."
+    },
+    {
+      "id": "q20",
+      "type": "unanswerable",
+      "split": "test",
+      "question": "How do you deploy FastAPI to Kubernetes using a Helm chart?",
+      "gold_doc": null,
+      "hit@k": 0.0,
+      "mrr": 0.0,
+      "abstention_ok": true,
+      "abstention_reason": "Correct refusal",
+      "retrieved_docs": [
+        36,
+        29,
+        35,
+        23
+      ],
+      "latency_sec": 1.586,
+      "answer": "I don't have enough information in the provided documents."
+    }
+  ]
+}
