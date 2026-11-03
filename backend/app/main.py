@@ -12,6 +12,7 @@ app = FastAPI(title="DocPilot API", version="0.1.0")
 class AskRequest(BaseModel):
     question: str
     top_k: int = 4
+    doc_filter: str | None = None  # <--- Added filter option
 
 
 @app.get("/health")
@@ -64,8 +65,13 @@ async def ingest_files(files: list[UploadFile] = File(...)):
 
 @app.post("/ask")
 def ask_question(request: AskRequest):
-    """Searches persistent index and generates a grounded, cited answer."""
-    passages = search(query=request.question, top_k=request.top_k)
+    """Searches persistent index with optional metadata filtering and generates an answer."""
+    # Pass doc_filter into search()
+    passages = search(
+        query=request.question, 
+        top_k=request.top_k, 
+        doc_filter=request.doc_filter
+    )
 
     if not passages:
         return {
@@ -73,7 +79,6 @@ def ask_question(request: AskRequest):
             "sources": [],
         }
 
-    # Format numbered passages for prompt
     context_blocks = [
         f"[{p['number']}] (Source: {p['doc']}, Chunk: {p['chunk_id']})\n{p['text']}"
         for p in passages
@@ -100,3 +105,4 @@ Answer:"""
         "answer": answer.strip(),
         "sources": passages,
     }
+

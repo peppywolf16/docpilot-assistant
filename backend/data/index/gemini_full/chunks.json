@@ -1,0 +1,597 @@
+[
+  {
+    "doc_name": "body.md",
+    "chunk_id": 1,
+    "text": "[Section: Request Body { #request-body }]\n\nWhen you need to send data from a client (let's say, a browser) to your API, you send it as a **request body**.\n\nA **request** body is data sent by the client to your API. A **response** body is the data your API sends to the client.\n\nYour API almost always has to send a **response** body. But clients don't necessarily need to send **request bodies** all the time, sometimes they only request a path, maybe with some query parameters, but don't send a body.\n\nTo declare a **request** body, you use [Pydantic](https://pydantic.dev/docs/) models with all their power and benefits.\n\nTo send data, you should use one of: `POST` (the most common), `PUT`, `DELETE` or `PATCH`.",
+    "heading_path": "Request Body { #request-body }",
+    "position": 1
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 2,
+    "text": "[Section: Request Body { #request-body }]\n\nSending a body with a `GET` request has an undefined behavior in the specifications, nevertheless, it is supported by FastAPI, only for very complex/extreme use cases.\n\nAs it is discouraged, the interactive docs with Swagger UI won't show the documentation for the body when using `GET`, and proxies in the middle might not support it.",
+    "heading_path": "Request Body { #request-body }",
+    "position": 2
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 3,
+    "text": "[Section: Request Body { #request-body } > Import Pydantic's `BaseModel` { #import-pydantics-basemodel }]\n\nFirst, you need to import `BaseModel` from `pydantic`:",
+    "heading_path": "Request Body { #request-body } > Import Pydantic's `BaseModel` { #import-pydantics-basemodel }",
+    "position": 3
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 4,
+    "text": "[Section: Request Body { #request-body } > Create your data model { #create-your-data-model }]\n\nThen you declare your data model as a class that inherits from `BaseModel`.\n\nUse standard Python types for all the attributes:\n\nThe same as when declaring query parameters, when a model attribute has a default value, it is not required. Otherwise, it is required. Use `None` to make it just optional.\n\nFor example, this model above declares a JSON \"`object`\" (or Python `dict`) like:\n\n```JSON\n{\n    \"name\": \"Foo\",\n    \"description\": \"An optional description\",\n    \"price\": 45.2,\n    \"tax\": 3.5\n}\n```\n\n...as `description` and `tax` are optional (with a default value of `None`), this JSON \"`object`\" would also be valid:\n\n```JSON\n{\n    \"name\": \"Foo\",\n    \"price\": 45.2\n}\n```",
+    "heading_path": "Request Body { #request-body } > Create your data model { #create-your-data-model }",
+    "position": 4
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 5,
+    "text": "[Section: Request Body { #request-body } > Declare it as a parameter { #declare-it-as-a-parameter }]\n\nTo add it to your *path operation*, declare it the same way you declared path and query parameters:\n\n...and declare its type as the model you created, `Item`.",
+    "heading_path": "Request Body { #request-body } > Declare it as a parameter { #declare-it-as-a-parameter }",
+    "position": 5
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 6,
+    "text": "[Section: Request Body { #request-body } > Results { #results }]\n\nWith just that Python type declaration, **FastAPI** will:",
+    "heading_path": "Request Body { #request-body } > Results { #results }",
+    "position": 6
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 7,
+    "text": "[Section: Request Body { #request-body } > Results { #results }]\n\n* Read the body of the request as JSON.\n* Convert the corresponding types (if needed).\n* Validate the data.\n    * If the data is invalid, it will return a nice and clear error, indicating exactly where and what was the incorrect data.\n* Give you the received data in the parameter `item`.\n    * As you declared it in the function to be of type `Item`, you will also have all the editor support (completion, etc) for all of the attributes and their types.\n* Generate [JSON Schema](https://json-schema.org) definitions for your model, you can also use them anywhere else you like if it makes sense for your project.\n* Those schemas will be part of the generated OpenAPI schema, and used by the automatic documentation <abbr title=\"User Interfaces\">UIs</abbr>.",
+    "heading_path": "Request Body { #request-body } > Results { #results }",
+    "position": 7
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 8,
+    "text": "[Section: Request Body { #request-body } > Automatic docs { #automatic-docs }]\n\nThe JSON Schemas of your models will be part of your OpenAPI generated schema, and will be shown in the interactive API docs:\n\n<img src=\"/img/tutorial/body/image01.png\">\n\nAnd will also be used in the API docs inside each *path operation* that needs them:\n\n<img src=\"/img/tutorial/body/image02.png\">",
+    "heading_path": "Request Body { #request-body } > Automatic docs { #automatic-docs }",
+    "position": 8
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 9,
+    "text": "[Section: Request Body { #request-body } > Editor support { #editor-support }]\n\nIn your editor, inside your function you will get type hints and completion everywhere (this wouldn't happen if you received a `dict` instead of a Pydantic model):\n\n<img src=\"/img/tutorial/body/image03.png\">\n\nYou also get error checks for incorrect type operations:\n\n<img src=\"/img/tutorial/body/image04.png\">\n\nThis is not by chance, the whole framework was built around that design.\n\nAnd it was thoroughly tested at the design phase, before any implementation, to ensure it would work with all the editors.\n\nThere were even some changes to Pydantic itself to support this.\n\nThe previous screenshots were taken with [Visual Studio Code](https://code.visualstudio.com).\n\nBut you would get the same editor support with [PyCharm](https://www.jetbrains.com/pycharm/) and most of the other Python editors:",
+    "heading_path": "Request Body { #request-body } > Editor support { #editor-support }",
+    "position": 9
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 10,
+    "text": "[Section: Request Body { #request-body } > Editor support { #editor-support }]\n\n<img src=\"/img/tutorial/body/image05.png\">\n\nIf you use [PyCharm](https://www.jetbrains.com/pycharm/) as your editor, you can use the [Pydantic PyCharm Plugin](https://github.com/koxudaxi/pydantic-pycharm-plugin/).\n\nIt improves editor support for Pydantic models, with:\n\n* auto-completion\n* type checks\n* refactoring\n* searching\n* inspections",
+    "heading_path": "Request Body { #request-body } > Editor support { #editor-support }",
+    "position": 10
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 11,
+    "text": "[Section: Request Body { #request-body } > Use the model { #use-the-model }]\n\nInside of the function, you can access all the attributes of the model object directly:",
+    "heading_path": "Request Body { #request-body } > Use the model { #use-the-model }",
+    "position": 11
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 12,
+    "text": "[Section: Request Body { #request-body } > Request body + path parameters { #request-body-path-parameters }]\n\nYou can declare path parameters and request body at the same time.\n\n**FastAPI** will recognize that the function parameters that match path parameters should be **taken from the path**, and that function parameters that are declared to be Pydantic models should be **taken from the request body**.",
+    "heading_path": "Request Body { #request-body } > Request body + path parameters { #request-body-path-parameters }",
+    "position": 12
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 13,
+    "text": "[Section: Request Body { #request-body } > Request body + path + query parameters { #request-body-path-query-parameters }]\n\nYou can also declare **body**, **path** and **query** parameters, all at the same time.\n\n**FastAPI** will recognize each of them and take the data from the correct place.\n\nThe function parameters will be recognized as follows:\n\n* If the parameter is also declared in the **path**, it will be used as a path parameter.\n* If the parameter is of a **singular type** (like `int`, `float`, `str`, `bool`, etc) it will be interpreted as a **query** parameter.\n* If the parameter is declared to be of the type of a **Pydantic model**, it will be interpreted as a request **body**.\n\nFastAPI will know that the value of `q` is not required because of the default value `= None`.",
+    "heading_path": "Request Body { #request-body } > Request body + path + query parameters { #request-body-path-query-parameters }",
+    "position": 13
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 14,
+    "text": "[Section: Request Body { #request-body } > Request body + path + query parameters { #request-body-path-query-parameters }]\n\nThe `str | None` is not used by FastAPI to determine that the value is not required, it will know it's not required because it has a default value of `= None`.\n\nBut adding the type annotations will allow your editor to give you better support and detect errors.",
+    "heading_path": "Request Body { #request-body } > Request body + path + query parameters { #request-body-path-query-parameters }",
+    "position": 14
+  },
+  {
+    "doc_name": "body.md",
+    "chunk_id": 15,
+    "text": "[Section: Request Body { #request-body } > Without Pydantic { #without-pydantic }]\n\nIf you don't want to use Pydantic models, you can also use **Body** parameters. See the docs for [Body - Multiple Parameters: Singular values in body](body-multiple-params.md#singular-values-in-body).",
+    "heading_path": "Request Body { #request-body } > Without Pydantic { #without-pydantic }",
+    "position": 15
+  },
+  {
+    "doc_name": "extra-models.md",
+    "chunk_id": 16,
+    "text": "[Section: Extra Models { #extra-models }]\n\nContinuing with the previous example, it will be common to have more than one related model.\n\nThis is especially the case for user models, because:\n\n* The **input model** needs to be able to have a password.\n* The **output model** should not have a password.\n* The **database model** would probably need to have a hashed password.\n\nNever store user's plaintext passwords. Always store a \"secure hash\" that you can then verify.\n\nIf you don't know, you will learn what a \"password hash\" is in the [security chapters](security/simple-oauth2.md#password-hashing).",
+    "heading_path": "Extra Models { #extra-models }",
+    "position": 1
+  },
+  {
+    "doc_name": "extra-models.md",
+    "chunk_id": 17,
+    "text": "[Section: Extra Models { #extra-models } > Multiple models { #multiple-models }]\n\nHere's a general idea of what the models could look like with their password fields and the places where they are used:",
+    "heading_path": "Extra Models { #extra-models } > Multiple models { #multiple-models }",
+    "position": 2
+  },
+  {
+    "doc_name": "extra-models.md",
+    "chunk_id": 18,
+    "text": "[Section: Extra Models { #extra-models } > Multiple models { #multiple-models } > About `**user_in.model_dump()` { #about-user-in-model-dump } > Pydantic's `.model_dump()` { #pydantics-model-dump }]\n\n`user_in` is a Pydantic model of class `UserIn`.\n\nPydantic models have a `.model_dump()` method that returns a `dict` with the model's data.\n\nSo, if we create a Pydantic object `user_in` like:\n\n```Python\nuser_in = UserIn(username=\"john\", password=\"secret\", email=\"john.doe@example.com\")\n```\n\nand then we call:\n\n```Python\nuser_dict = user_in.model_dump()\n```\n\nwe now have a `dict` with the data in the variable `user_dict` (it's a `dict` instead of a Pydantic model object).\n\nAnd if we call:\n\n```Python\nprint(user_dict)\n```\n\nwe would get a Python `dict` with:\n\n```Python\n{\n    \"username\": \"john\",\n    \"password\": \"secret\",\n    \"email\": \"john.doe@example.com\",\n    \"full_name\": None,\n}\n```",
+    "heading_path": "Extra Models { #extra-models } > Multiple models { #multiple-models } > About `**user_in.model_dump()` { #about-user-in-model-dump } > Pydantic's `.model_dump()` { #pydantics-model-dump }",
+    "position": 3
+  },
+  {
+    "doc_name": "extra-models.md",
+    "chunk_id": 19,
+    "text": "[Section: Extra Models { #extra-models } > Multiple models { #multiple-models } > About `**user_in.model_dump()` { #about-user-in-model-dump } > Unpacking a `dict` { #unpacking-a-dict }]\n\nIf we take a `dict` like `user_dict` and pass it to a function (or class) with `**user_dict`, Python will \"unpack\" it. It will pass the keys and values of the `user_dict` directly as key-value arguments.\n\nSo, continuing with the `user_dict` from above, writing:\n\n```Python\nUserInDB(**user_dict)\n```\n\nwould result in something equivalent to:\n\n```Python\nUserInDB(\n    username=\"john\",\n    password=\"secret\",\n    email=\"john.doe@example.com\",\n    full_name=None,\n)\n```\n\nOr more exactly, using `user_dict` directly, with whatever contents it might have in the future:\n\n```Python\nUserInDB(\n    username=user_dict[\"username\"],\n    password=user_dict[\"password\"],\n    email=user_dict[\"email\"],\n    full_name=user_dict[\"full_name\"],\n)\n```",
+    "heading_path": "Extra Models { #extra-models } > Multiple models { #multiple-models } > About `**user_in.model_dump()` { #about-user-in-model-dump } > Unpacking a `dict` { #unpacking-a-dict }",
+    "position": 4
+  },
+  {
+    "doc_name": "extra-models.md",
+    "chunk_id": 20,
+    "text": "[Section: Extra Models { #extra-models } > Multiple models { #multiple-models } > About `**user_in.model_dump()` { #about-user-in-model-dump } > A Pydantic model from the contents of another { #a-pydantic-model-from-the-contents-of-another }]\n\nAs in the example above we got `user_dict` from `user_in.model_dump()`, this code:\n\n```Python\nuser_dict = user_in.model_dump()\nUserInDB(**user_dict)\n```\n\nwould be equivalent to:\n\n```Python\nUserInDB(**user_in.model_dump())\n```\n\n...because `user_in.model_dump()` is a `dict`, and then we make Python \"unpack\" it by passing it to `UserInDB` prefixed with `**`.\n\nSo, we get a Pydantic model from the data in another Pydantic model.",
+    "heading_path": "Extra Models { #extra-models } > Multiple models { #multiple-models } > About `**user_in.model_dump()` { #about-user-in-model-dump } > A Pydantic model from the contents of another { #a-pydantic-model-from-the-contents-of-another }",
+    "position": 5
+  },
+  {
+    "doc_name": "extra-models.md",
+    "chunk_id": 21,
+    "text": "[Section: Extra Models { #extra-models } > Multiple models { #multiple-models } > About `**user_in.model_dump()` { #about-user-in-model-dump } > Unpacking a `dict` and extra keywords { #unpacking-a-dict-and-extra-keywords }]\n\nAnd then adding the extra keyword argument `hashed_password=hashed_password`, like in:\n\n```Python\nUserInDB(**user_in.model_dump(), hashed_password=hashed_password)\n```\n\n...ends up being like:\n\n```Python\nUserInDB(\n    username=user_dict[\"username\"],\n    password=user_dict[\"password\"],\n    email=user_dict[\"email\"],\n    full_name=user_dict[\"full_name\"],\n    hashed_password=hashed_password,\n)\n```\n\nThe supporting additional functions `fake_password_hasher` and `fake_save_user` are just to demo a possible flow of the data, but they of course are not providing any real security.",
+    "heading_path": "Extra Models { #extra-models } > Multiple models { #multiple-models } > About `**user_in.model_dump()` { #about-user-in-model-dump } > Unpacking a `dict` and extra keywords { #unpacking-a-dict-and-extra-keywords }",
+    "position": 6
+  },
+  {
+    "doc_name": "extra-models.md",
+    "chunk_id": 22,
+    "text": "[Section: Extra Models { #extra-models } > Reduce duplication { #reduce-duplication }]\n\nReducing code duplication is one of the core ideas in **FastAPI**.\n\nAs code duplication increases the chances of bugs, security issues, code desynchronization issues (when you update in one place but not in the others), etc.\n\nAnd these models are all sharing a lot of the data and duplicating attribute names and types.\n\nWe could do better.\n\nWe can declare a `UserBase` model that serves as a base for our other models. And then we can make subclasses of that model that inherit its attributes (type declarations, validation, etc).\n\nAll the data conversion, validation, documentation, etc. will still work as normally.\n\nThat way, we can declare just the differences between the models (with plaintext `password`, with `hashed_password` and without password):",
+    "heading_path": "Extra Models { #extra-models } > Reduce duplication { #reduce-duplication }",
+    "position": 7
+  },
+  {
+    "doc_name": "extra-models.md",
+    "chunk_id": 23,
+    "text": "[Section: Extra Models { #extra-models } > `Union` or `anyOf` { #union-or-anyof }]\n\nYou can declare a response to be the `Union` of two or more types, that means, that the response would be any of them.\n\nIt will be defined in OpenAPI with `anyOf`.\n\nTo do that, use the standard Python type hint [`typing.Union`](https://docs.python.org/3/library/typing.html#typing.Union):\n\nWhen defining a [`Union`](https://pydantic.dev/docs/validation/latest/concepts/unions/), include the most specific type first, followed by the less specific type. In the example below, the more specific `PlaneItem` comes before `CarItem` in `Union[PlaneItem, CarItem]`.",
+    "heading_path": "Extra Models { #extra-models } > `Union` or `anyOf` { #union-or-anyof }",
+    "position": 8
+  },
+  {
+    "doc_name": "extra-models.md",
+    "chunk_id": 24,
+    "text": "[Section: Extra Models { #extra-models } > `Union` or `anyOf` { #union-or-anyof } > `Union` in Python 3.10 { #union-in-python-3-10 }]\n\nIn this example we pass `Union[PlaneItem, CarItem]` as the value of the argument `response_model`.\n\nBecause we are passing it as a **value to an argument** instead of putting it in a **type annotation**, we have to use `Union` even in Python 3.10.\n\nIf it was in a type annotation we could have used the vertical bar, as:\n\n```Python\nsome_variable: PlaneItem | CarItem\n```\n\nBut if we put that in the assignment `response_model=PlaneItem | CarItem` we would get an error, because Python would try to perform an **invalid operation** between `PlaneItem` and `CarItem` instead of interpreting that as a type annotation.",
+    "heading_path": "Extra Models { #extra-models } > `Union` or `anyOf` { #union-or-anyof } > `Union` in Python 3.10 { #union-in-python-3-10 }",
+    "position": 9
+  },
+  {
+    "doc_name": "extra-models.md",
+    "chunk_id": 25,
+    "text": "[Section: Extra Models { #extra-models } > List of models { #list-of-models }]\n\nThe same way, you can declare responses of lists of objects.\n\nFor that, use the standard Python `list`:",
+    "heading_path": "Extra Models { #extra-models } > List of models { #list-of-models }",
+    "position": 10
+  },
+  {
+    "doc_name": "extra-models.md",
+    "chunk_id": 26,
+    "text": "[Section: Extra Models { #extra-models } > Response with arbitrary `dict` { #response-with-arbitrary-dict }]\n\nYou can also declare a response using a plain arbitrary `dict`, declaring just the type of the keys and values, without using a Pydantic model.\n\nThis is useful if you don't know the valid field/attribute names (that would be needed for a Pydantic model) beforehand.\n\nIn this case, you can use `dict`:",
+    "heading_path": "Extra Models { #extra-models } > Response with arbitrary `dict` { #response-with-arbitrary-dict }",
+    "position": 11
+  },
+  {
+    "doc_name": "extra-models.md",
+    "chunk_id": 27,
+    "text": "[Section: Extra Models { #extra-models } > Recap { #recap }]\n\nUse multiple Pydantic models and inherit freely for each case.\n\nYou don't need to have a single data model per entity if that entity must be able to have different \"states\". The **user** \"entity\" is an example, with states that include `password`, `password_hash`, or no password.",
+    "heading_path": "Extra Models { #extra-models } > Recap { #recap }",
+    "position": 12
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 28,
+    "text": "[Section: First Steps { #first-steps }]\n\nThe simplest FastAPI file could look like this:\n\nCopy that to a file `main.py`.\n\nFastAPI has an [official extension for VS Code](https://marketplace.visualstudio.com/items?itemName=FastAPILabs.fastapi-vscode) (and Cursor), which provides a lot of features, including a path operation explorer, path operation search, CodeLens navigation in tests (jump to definition from tests), and FastAPI Cloud deployment and logs, all from your editor.\n\nRun the live server:\n\n<div class=\"termy\">",
+    "heading_path": "First Steps { #first-steps }",
+    "position": 1
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 29,
+    "text": "[Section: First Steps { #first-steps }]\n\n```console\n$ <font color=\"#4E9A06\">uv run fastapi</font> dev\n\n  <span style=\"background-color:#009485\"><font color=\"#D3D7CF\"> FastAPI </font></span>  Starting development server 🚀\n\n             Searching for package file structure from directories\n             with <font color=\"#3465A4\">__init__.py</font> files\n             Importing from <font color=\"#75507B\">/home/user/code/</font><font color=\"#AD7FA8\">awesomeapp</font>\n\n   <span style=\"background-color:#007166\"><font color=\"#D3D7CF\"> module </font></span>  🐍 main.py\n\n     <span style=\"background-color:#007166\"><font color=\"#D3D7CF\"> code </font></span>  Importing the FastAPI app object from the module with\n             the following code:\n\n             <u style=\"text-decoration-style:solid\">from </u><u style=\"text-decoration-style:solid\"><b>main</b></u><u style=\"text-decoration-style:solid\"> import </u><u style=\"text-decoration-style:solid\"><b>app</b></u>\n\n      <span style=\"background-color:#007166\"><font color=\"#D3D7CF\"> app </font></span>  Using import string: <font color=\"#3465A4\">main:app</font>\n\n   <span style=\"background-color:#007166\"><font color=\"#D3D7CF\"> server </font></span>  Server started at <font color=\"#729FCF\"><u style=\"text-decoration-style:solid\">http://127.0.0.1:8000</u></font>\n   <span style=\"background-color:#007166\"><font color=\"#D3D7CF\"> server </font></span>  Documentation at <font color=\"#729FCF\"><u style=\"text-decoration-style:solid\">http://127.0.0.1:8000/docs</u></font>\n\n      <span style=\"background-color:#007166\"><font color=\"#D3D7CF\"> tip </font></span>  Running in development mode, for production use:\n             <b>fastapi run</b>\n\n             Logs:\n\n     <span style=\"background-color:#007166\"><font color=\"#D3D7CF\"> INFO </font></span>  Will watch for changes in these directories:\n             <b>[</b><font color=\"#4E9A06\">&apos;/home/user/code/awesomeapp&apos;</font><b>]</b>\n     <span style=\"background-color:#007166\"><font color=\"#D3D7CF\"> INFO </font></span>  Uvicorn running on <font color=\"#729FCF\"><u style=\"text-decoration-style:solid\">http://127.0.0.1:8000</u></font> <b>(</b>Press CTRL+C\n             to quit<b>)</b>\n     <span style=\"background-color:#007166\"><font color=\"#D3D7CF\"> INFO </font></span>  Started reloader process <b>[</b><font color=\"#34E2E2\"><b>383138</b></font><b>]</b> using WatchFiles\n     <span style=\"background-color:#007166\"><font color=\"#D3D7CF\"> INFO </font></span>  Started server process <b>[</b><font color=\"#34E2E2\"><b>383153</b></font><b>]</b>\n     <span style=\"background-color:#007166\"><font color=\"#D3D7CF\"> INFO </font></span>  Waiting for application startup.\n     <span style=\"background-color:#007166\"><font color=\"#D3D7CF\"> INFO </font></span>  Application startup complete.\n```",
+    "heading_path": "First Steps { #first-steps }",
+    "position": 2
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 30,
+    "text": "[Section: First Steps { #first-steps }]\n\n</div>\n\nIn the output, there's a line with something like:\n\n```hl_lines=\"4\"\nINFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)\n```\n\nThat line shows the URL where your app is being served on your local machine.",
+    "heading_path": "First Steps { #first-steps }",
+    "position": 3
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 31,
+    "text": "[Section: First Steps { #first-steps } > Check it { #check-it }]\n\nOpen your browser at [http://127.0.0.1:8000](http://127.0.0.1:8000).\n\nYou will see the JSON response as:\n\n```JSON\n{\"message\": \"Hello World\"}\n```",
+    "heading_path": "First Steps { #first-steps } > Check it { #check-it }",
+    "position": 4
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 32,
+    "text": "[Section: First Steps { #first-steps } > Check it { #check-it } > Interactive API docs { #interactive-api-docs }]\n\nNow go to [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).\n\nYou will see the automatic interactive API documentation (provided by [Swagger UI](https://github.com/swagger-api/swagger-ui)):\n\n![Swagger UI](https://fastapi.tiangolo.com/img/index/index-01-swagger-ui-simple.png)",
+    "heading_path": "First Steps { #first-steps } > Check it { #check-it } > Interactive API docs { #interactive-api-docs }",
+    "position": 5
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 33,
+    "text": "[Section: First Steps { #first-steps } > Check it { #check-it } > Alternative API docs { #alternative-api-docs }]\n\nAnd now, go to [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc).\n\nYou will see the alternative automatic documentation (provided by [ReDoc](https://github.com/Redocly/redoc)):\n\n![ReDoc](https://fastapi.tiangolo.com/img/index/index-02-redoc-simple.png)",
+    "heading_path": "First Steps { #first-steps } > Check it { #check-it } > Alternative API docs { #alternative-api-docs }",
+    "position": 6
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 34,
+    "text": "[Section: First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi }]\n\n**FastAPI** generates a \"schema\" with all your API using the **OpenAPI** standard for defining APIs.",
+    "heading_path": "First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi }",
+    "position": 7
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 35,
+    "text": "[Section: First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi } > \"Schema\" { #schema }]\n\nA \"schema\" is a definition or description of something. Not the code that implements it, but just an abstract description.",
+    "heading_path": "First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi } > \"Schema\" { #schema }",
+    "position": 8
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 36,
+    "text": "[Section: First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi } > API \"schema\" { #api-schema }]\n\nIn this case, [OpenAPI](https://github.com/OAI/OpenAPI-Specification) is a specification that dictates how to define a schema of your API.\n\nThis schema definition includes your API paths, the possible parameters they take, etc.",
+    "heading_path": "First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi } > API \"schema\" { #api-schema }",
+    "position": 9
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 37,
+    "text": "[Section: First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi } > Data \"schema\" { #data-schema }]\n\nThe term \"schema\" might also refer to the shape of some data, like a JSON content.\n\nIn that case, it would mean the JSON attributes, and data types they have, etc.",
+    "heading_path": "First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi } > Data \"schema\" { #data-schema }",
+    "position": 10
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 38,
+    "text": "[Section: First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi } > OpenAPI and JSON Schema { #openapi-and-json-schema }]\n\nOpenAPI defines an API schema for your API. And that schema includes definitions (or \"schemas\") of the data sent and received by your API using **JSON Schema**, the standard for JSON data schemas.",
+    "heading_path": "First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi } > OpenAPI and JSON Schema { #openapi-and-json-schema }",
+    "position": 11
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 39,
+    "text": "[Section: First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi } > Check the `openapi.json` { #check-the-openapi-json }]\n\nIf you are curious about what the raw OpenAPI schema looks like, FastAPI automatically generates a JSON (schema) with the descriptions of all your API.\n\nYou can see it directly at: [http://127.0.0.1:8000/openapi.json](http://127.0.0.1:8000/openapi.json).\n\nIt will show a JSON starting with something like:\n\n```JSON\n{\n    \"openapi\": \"3.1.0\",\n    \"info\": {\n        \"title\": \"FastAPI\",\n        \"version\": \"0.1.0\"\n    },\n    \"paths\": {\n        \"/items/\": {\n            \"get\": {\n                \"responses\": {\n                    \"200\": {\n                        \"description\": \"Successful Response\",\n                        \"content\": {\n                            \"application/json\": {\n\n...\n```",
+    "heading_path": "First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi } > Check the `openapi.json` { #check-the-openapi-json }",
+    "position": 12
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 40,
+    "text": "[Section: First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi } > What is OpenAPI for { #what-is-openapi-for }]\n\nThe OpenAPI schema is what powers the two interactive documentation systems included.\n\nAnd there are dozens of alternatives, all based on OpenAPI. You could easily add any of those alternatives to your application built with **FastAPI**.\n\nYou could also use it to generate code automatically, for clients that communicate with your API. For example, frontend, mobile or IoT applications.",
+    "heading_path": "First Steps { #first-steps } > Check it { #check-it } > OpenAPI { #openapi } > What is OpenAPI for { #what-is-openapi-for }",
+    "position": 13
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 41,
+    "text": "[Section: First Steps { #first-steps } > Check it { #check-it } > Configure the app `entrypoint` in `pyproject.toml` { #configure-the-app-entrypoint-in-pyproject-toml }]\n\nYou can configure where your app is located in a `pyproject.toml` file like:\n\n```toml\n[tool.fastapi]\nentrypoint = \"main:app\"\n```\n\nThat `entrypoint` will tell the `fastapi` command that it should import the app like:\n\n```python\nfrom main import app\n```\n\nIf your code was structured like:\n\n```\n.\n├── backend\n│   ├── main.py\n│   ├── __init__.py\n```\n\nThen you would set the `entrypoint` as:\n\n```toml\n[tool.fastapi]\nentrypoint = \"backend.main:app\"\n```\n\nwhich would be equivalent to:\n\n```python\nfrom backend.main import app\n```",
+    "heading_path": "First Steps { #first-steps } > Check it { #check-it } > Configure the app `entrypoint` in `pyproject.toml` { #configure-the-app-entrypoint-in-pyproject-toml }",
+    "position": 14
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 42,
+    "text": "[Section: First Steps { #first-steps } > Check it { #check-it } > `fastapi dev` with path or with `--entrypoint` CLI option { #fastapi-dev-with-path-or-with-entrypoint-cli-option }]\n\nYou can also pass the file path to the `fastapi dev` command, and it will guess the FastAPI app object to use:\n\n```console\n$ uv run fastapi dev main.py\n```\n\nOr, you can also pass the `--entrypoint` option to the `fastapi dev` command:\n\n```console\n$ uv run fastapi dev --entrypoint main:app\n```\n\nBut you would have to remember to pass the correct path\\entrypoint every time you call the `fastapi` command.\n\nAdditionally, other tools might not be able to find it, for example the [VS Code Extension](../editor-support.md) or [FastAPI Cloud](https://fastapicloud.com), so it is recommended to use the `entrypoint` in `pyproject.toml`.",
+    "heading_path": "First Steps { #first-steps } > Check it { #check-it } > `fastapi dev` with path or with `--entrypoint` CLI option { #fastapi-dev-with-path-or-with-entrypoint-cli-option }",
+    "position": 15
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 43,
+    "text": "[Section: First Steps { #first-steps } > Check it { #check-it } > Deploy your app (optional) { #deploy-your-app-optional }]\n\nYou can optionally deploy your FastAPI app to [FastAPI Cloud](https://fastapicloud.com) with a single command. 🚀\n\n<div class=\"termy\">\n\n```console\n$ uv run fastapi deploy\n\nDeploying to FastAPI Cloud...\n\n✅ Deployment successful!\n\n🐔 Ready the chicken! Your app is ready at https://myapp.fastapicloud.dev\n```\n\n</div>\n\nThe CLI will automatically detect your FastAPI application and deploy it to the cloud. If you are not logged in, your browser will open to complete the authentication process.\n\nThat's it! Now you can access your app at that URL. ✨",
+    "heading_path": "First Steps { #first-steps } > Check it { #check-it } > Deploy your app (optional) { #deploy-your-app-optional }",
+    "position": 16
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 44,
+    "text": "[Section: First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 1: import `FastAPI` { #step-1-import-fastapi }]\n\n`FastAPI` is a Python class that provides all the functionality for your API.\n\n`FastAPI` is a class that inherits directly from `Starlette`.\n\nYou can use all the [Starlette](https://starlette.dev/) functionality with `FastAPI` too.",
+    "heading_path": "First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 1: import `FastAPI` { #step-1-import-fastapi }",
+    "position": 17
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 45,
+    "text": "[Section: First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 2: create a `FastAPI` \"instance\" { #step-2-create-a-fastapi-instance }]\n\nHere the `app` variable will be an \"instance\" of the class `FastAPI`.\n\nThis will be the main point of interaction to create all your API.",
+    "heading_path": "First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 2: create a `FastAPI` \"instance\" { #step-2-create-a-fastapi-instance }",
+    "position": 18
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 46,
+    "text": "[Section: First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 3: create a *path operation* { #step-3-create-a-path-operation } > Path { #path }]\n\n\"Path\" here refers to the last part of the URL starting from the first `/`.\n\nSo, in a URL like:\n\n```\nhttps://example.com/items/foo\n```\n\n...the path would be:\n\n```\n/items/foo\n```\n\nA \"path\" is also commonly called an \"endpoint\" or a \"route\".\n\nWhile building an API, the \"path\" is the main way to separate \"concerns\" and \"resources\".",
+    "heading_path": "First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 3: create a *path operation* { #step-3-create-a-path-operation } > Path { #path }",
+    "position": 19
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 47,
+    "text": "[Section: First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 3: create a *path operation* { #step-3-create-a-path-operation } > Operation { #operation }]\n\n\"Operation\" here refers to one of the HTTP \"methods\".\n\nOne of:\n\n* `POST`\n* `GET`\n* `PUT`\n* `DELETE`\n\n...and the more exotic ones:\n\n* `OPTIONS`\n* `HEAD`\n* `PATCH`\n* `TRACE`\n\nIn the HTTP protocol, you can communicate to each path using one (or more) of these \"methods\".\n\n---\n\nWhen building APIs, you normally use these specific HTTP methods to perform a specific action.\n\nNormally you use:\n\n* `POST`: to create data.\n* `GET`: to read data.\n* `PUT`: to update data.\n* `DELETE`: to delete data.\n\nSo, in OpenAPI, each of the HTTP methods is called an \"operation\".\n\nWe are going to call them \"**operations**\" too.",
+    "heading_path": "First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 3: create a *path operation* { #step-3-create-a-path-operation } > Operation { #operation }",
+    "position": 20
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 48,
+    "text": "[Section: First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 3: create a *path operation* { #step-3-create-a-path-operation } > Define a *path operation decorator* { #define-a-path-operation-decorator }]\n\nThe `@app.get(\"/\")` tells **FastAPI** that the function right below is in charge of handling requests that go to:\n\n* the path `/`\n* using a <dfn title=\"an HTTP GET method\"><code>get</code> operation</dfn>\n\nThat `@something` syntax in Python is called a \"decorator\".\n\nYou put it on top of a function. Like a pretty decorative hat (I guess that's where the term came from).\n\nA \"decorator\" takes the function below and does something with it.\n\nIn our case, this decorator tells **FastAPI** that the function below corresponds to the **path** `/` with an **operation** `get`.\n\nIt is the \"**path operation decorator**\".\n\nYou can also use the other operations:\n\n* `@app.post()`\n* `@app.put()`\n* `@app.delete()`\n\nAnd the more exotic ones:",
+    "heading_path": "First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 3: create a *path operation* { #step-3-create-a-path-operation } > Define a *path operation decorator* { #define-a-path-operation-decorator }",
+    "position": 21
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 49,
+    "text": "[Section: First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 3: create a *path operation* { #step-3-create-a-path-operation } > Define a *path operation decorator* { #define-a-path-operation-decorator }]\n\n* `@app.options()`\n* `@app.head()`\n* `@app.patch()`\n* `@app.trace()`\n\nYou are free to use each operation (HTTP method) as you wish.\n\n**FastAPI** doesn't enforce any specific meaning.\n\nThe information here is presented as a guideline, not a requirement.\n\nFor example, when using GraphQL you normally perform all the actions using only `POST` operations.",
+    "heading_path": "First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 3: create a *path operation* { #step-3-create-a-path-operation } > Define a *path operation decorator* { #define-a-path-operation-decorator }",
+    "position": 22
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 50,
+    "text": "[Section: First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 4: define the **path operation function** { #step-4-define-the-path-operation-function }]\n\nThis is our \"**path operation function**\":\n\n* **path**: is `/`.\n* **operation**: is `get`.\n* **function**: is the function below the \"decorator\" (below `@app.get(\"/\")`).\n\nThis is a Python function.\n\nIt will be called by **FastAPI** whenever it receives a request to the URL \"`/`\" using a `GET` operation.\n\nIn this case, it is an `async` function.\n\n---\n\nYou could also define it as a normal function instead of `async def`:\n\nIf you don't know the difference, check the [Async: *\"In a hurry?\"*](../async.md#in-a-hurry).",
+    "heading_path": "First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 4: define the **path operation function** { #step-4-define-the-path-operation-function }",
+    "position": 23
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 51,
+    "text": "[Section: First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 5: return the content { #step-5-return-the-content }]\n\nYou can return a `dict`, `list`, singular values as `str`, `int`, etc.\n\nYou can also return Pydantic models (you'll see more about that later).\n\nThere are many other objects and models that will be automatically converted to JSON (including ORMs, etc). Try using your favorite ones, it's highly probable that they are already supported.",
+    "heading_path": "First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 5: return the content { #step-5-return-the-content }",
+    "position": 24
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 52,
+    "text": "[Section: First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 6: Deploy it { #step-6-deploy-it }]\n\nDeploy your app to **[FastAPI Cloud](https://fastapicloud.com)** with one command: `fastapi deploy`. 🎉",
+    "heading_path": "First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 6: Deploy it { #step-6-deploy-it }",
+    "position": 25
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 53,
+    "text": "[Section: First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 6: Deploy it { #step-6-deploy-it } > About FastAPI Cloud { #about-fastapi-cloud }]\n\n**[FastAPI Cloud](https://fastapicloud.com)** is built by the same author and team behind **FastAPI**.\n\nIt streamlines the process of **building**, **deploying**, and **accessing** an API with minimal effort.\n\nIt brings the same **developer experience** of building apps with FastAPI to **deploying** them to the cloud. 🎉\n\nFastAPI Cloud is the primary sponsor and funding provider for the *FastAPI and friends* open source projects. ✨",
+    "heading_path": "First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 6: Deploy it { #step-6-deploy-it } > About FastAPI Cloud { #about-fastapi-cloud }",
+    "position": 26
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 54,
+    "text": "[Section: First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 6: Deploy it { #step-6-deploy-it } > Deploy to other cloud providers { #deploy-to-other-cloud-providers }]\n\nFastAPI is open source and based on standards. You can deploy FastAPI apps to any cloud provider you choose.\n\nFollow your cloud provider's guides to deploy FastAPI apps with them. 🤓",
+    "heading_path": "First Steps { #first-steps } > Recap, step by step { #recap-step-by-step } > Step 6: Deploy it { #step-6-deploy-it } > Deploy to other cloud providers { #deploy-to-other-cloud-providers }",
+    "position": 27
+  },
+  {
+    "doc_name": "first-steps.md",
+    "chunk_id": 55,
+    "text": "[Section: First Steps { #first-steps } > Recap { #recap }]\n\n* Import `FastAPI`.\n* Create an `app` instance.\n* Write a **path operation decorator** using decorators like `@app.get(\"/\")`.\n* Define a **path operation function**; for example, `def root(): ...`.\n* Run the development server using the command `fastapi dev`.\n* Optionally deploy your app with `fastapi deploy`.",
+    "heading_path": "First Steps { #first-steps } > Recap { #recap }",
+    "position": 28
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 56,
+    "text": "[Section: Path Parameters { #path-parameters }]\n\nYou can declare path \"parameters\" or \"variables\" with the same syntax used by Python format strings:\n\nThe value of the path parameter `item_id` will be passed to your function as the argument `item_id`.\n\nSo, if you run this example and go to [http://127.0.0.1:8000/items/foo](http://127.0.0.1:8000/items/foo), you will see a response of:\n\n```JSON\n{\"item_id\":\"foo\"}\n```",
+    "heading_path": "Path Parameters { #path-parameters }",
+    "position": 1
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 57,
+    "text": "[Section: Path Parameters { #path-parameters } > Path parameters with types { #path-parameters-with-types }]\n\nYou can declare the type of a path parameter in the function, using standard Python type annotations:\n\nIn this case, `item_id` is declared to be an `int`.\n\nThis will give you editor support inside of your function, with error checks, completion, etc.",
+    "heading_path": "Path Parameters { #path-parameters } > Path parameters with types { #path-parameters-with-types }",
+    "position": 2
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 58,
+    "text": "[Section: Path Parameters { #path-parameters } > Data <dfn title=\"also known as: serialization, parsing, marshalling\">conversion</dfn> { #data-conversion }]\n\nIf you run this example and open your browser at [http://127.0.0.1:8000/items/3](http://127.0.0.1:8000/items/3), you will see a response of:\n\n```JSON\n{\"item_id\":3}\n```\n\nNotice that the value your function received (and returned) is `3`, as a Python `int`, not a string `\"3\"`.\n\nSo, with that type declaration, **FastAPI** gives you automatic request <dfn title=\"converting the string that comes from an HTTP request into Python data\">\"parsing\"</dfn>.",
+    "heading_path": "Path Parameters { #path-parameters } > Data <dfn title=\"also known as: serialization, parsing, marshalling\">conversion</dfn> { #data-conversion }",
+    "position": 3
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 59,
+    "text": "[Section: Path Parameters { #path-parameters } > Data validation { #data-validation }]\n\nBut if you go to the browser at [http://127.0.0.1:8000/items/foo](http://127.0.0.1:8000/items/foo), you will see a nice HTTP error of:\n\n```JSON\n{\n  \"detail\": [\n    {\n      \"type\": \"int_parsing\",\n      \"loc\": [\n        \"path\",\n        \"item_id\"\n      ],\n      \"msg\": \"Input should be a valid integer, unable to parse string as an integer\",\n      \"input\": \"foo\"\n    }\n  ]\n}\n```\n\nbecause the path parameter `item_id` had a value of `\"foo\"`, which is not an `int`.\n\nThe same error would appear if you provided a `float` instead of an `int`, as in: [http://127.0.0.1:8000/items/4.2](http://127.0.0.1:8000/items/4.2)\n\nSo, with the same Python type declaration, **FastAPI** gives you data validation.\n\nNotice that the error also clearly states exactly the point where the validation didn't pass.",
+    "heading_path": "Path Parameters { #path-parameters } > Data validation { #data-validation }",
+    "position": 4
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 60,
+    "text": "[Section: Path Parameters { #path-parameters } > Data validation { #data-validation }]\n\nThis is incredibly helpful while developing and debugging code that interacts with your API.",
+    "heading_path": "Path Parameters { #path-parameters } > Data validation { #data-validation }",
+    "position": 5
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 61,
+    "text": "[Section: Path Parameters { #path-parameters } > Documentation { #documentation }]\n\nAnd when you open your browser at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs), you will see an automatic, interactive, API documentation like:\n\n<img src=\"/img/tutorial/path-params/image01.png\">\n\nAgain, just with that same Python type declaration, **FastAPI** gives you automatic, interactive documentation (integrating Swagger UI).\n\nNotice that the path parameter is declared to be an integer.",
+    "heading_path": "Path Parameters { #path-parameters } > Documentation { #documentation }",
+    "position": 6
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 62,
+    "text": "[Section: Path Parameters { #path-parameters } > Standards-based benefits, alternative documentation { #standards-based-benefits-alternative-documentation }]\n\nAnd because the generated schema is from the [OpenAPI](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md) standard, there are many compatible tools.\n\nBecause of this, **FastAPI** itself provides an alternative API documentation (using ReDoc), which you can access at [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc):\n\n<img src=\"/img/tutorial/path-params/image02.png\">\n\nThe same way, there are many compatible tools. Including code generation tools for many languages.",
+    "heading_path": "Path Parameters { #path-parameters } > Standards-based benefits, alternative documentation { #standards-based-benefits-alternative-documentation }",
+    "position": 7
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 63,
+    "text": "[Section: Path Parameters { #path-parameters } > Pydantic { #pydantic }]\n\nAll the data validation is performed under the hood by [Pydantic](https://pydantic.dev/docs/), so you get all the benefits from it. And you know you are in good hands.\n\nYou can use the same type declarations with `str`, `float`, `bool` and many other complex data types.\n\nSeveral of these are explored in the next chapters of the tutorial.",
+    "heading_path": "Path Parameters { #path-parameters } > Pydantic { #pydantic }",
+    "position": 8
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 64,
+    "text": "[Section: Path Parameters { #path-parameters } > Order matters { #order-matters }]\n\nWhen creating *path operations*, you can find situations where you have a fixed path.\n\nLike `/users/me`, let's say that it's to get data about the current user.\n\nAnd then you can also have a path `/users/{user_id}` to get data about a specific user by some user ID.\n\nBecause *path operations* are evaluated in order, you need to make sure that the path for `/users/me` is declared before the one for `/users/{user_id}`:\n\nOtherwise, the path for `/users/{user_id}` would match also for `/users/me`, \"thinking\" that it's receiving a parameter `user_id` with a value of `\"me\"`.\n\nSimilarly, you cannot redefine a path operation:\n\nThe first one will always be used since the path matches first.",
+    "heading_path": "Path Parameters { #path-parameters } > Order matters { #order-matters }",
+    "position": 9
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 65,
+    "text": "[Section: Path Parameters { #path-parameters } > Predefined values { #predefined-values }]\n\nIf you have a *path operation* that receives a *path parameter*, but you want the possible valid *path parameter* values to be predefined, you can use a standard Python <abbr title=\"Enumeration\">`Enum`</abbr>.",
+    "heading_path": "Path Parameters { #path-parameters } > Predefined values { #predefined-values }",
+    "position": 10
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 66,
+    "text": "[Section: Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Create an `Enum` class { #create-an-enum-class }]\n\nImport `Enum` and create a sub-class that inherits from `str` and from `Enum`.\n\nBy inheriting from `str` the API docs will be able to know that the values must be of type `string` and will be able to render correctly.\n\nThen create class attributes with fixed values, which will be the available valid values:\n\nIf you are wondering, \"AlexNet\", \"ResNet\", and \"LeNet\" are just names of Machine Learning <dfn title=\"Technically, Deep Learning model architectures\">models</dfn>.",
+    "heading_path": "Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Create an `Enum` class { #create-an-enum-class }",
+    "position": 11
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 67,
+    "text": "[Section: Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Declare a *path parameter* { #declare-a-path-parameter }]\n\nThen create a *path parameter* with a type annotation using the enum class you created (`ModelName`):",
+    "heading_path": "Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Declare a *path parameter* { #declare-a-path-parameter }",
+    "position": 12
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 68,
+    "text": "[Section: Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Check the docs { #check-the-docs }]\n\nBecause the available values for the *path parameter* are predefined, the interactive docs can show them nicely:\n\n<img src=\"/img/tutorial/path-params/image03.png\">",
+    "heading_path": "Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Check the docs { #check-the-docs }",
+    "position": 13
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 69,
+    "text": "[Section: Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Working with Python *enumerations* { #working-with-python-enumerations }]\n\nThe value of the *path parameter* will be an *enumeration member*.",
+    "heading_path": "Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Working with Python *enumerations* { #working-with-python-enumerations }",
+    "position": 14
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 70,
+    "text": "[Section: Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Working with Python *enumerations* { #working-with-python-enumerations } > Compare *enumeration members* { #compare-enumeration-members }]\n\nYou can compare it with the *enumeration member* in your created enum `ModelName`:",
+    "heading_path": "Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Working with Python *enumerations* { #working-with-python-enumerations } > Compare *enumeration members* { #compare-enumeration-members }",
+    "position": 15
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 71,
+    "text": "[Section: Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Working with Python *enumerations* { #working-with-python-enumerations } > Get the *enumeration value* { #get-the-enumeration-value }]\n\nYou can get the actual value (a `str` in this case) using `model_name.value`, or in general, `your_enum_member.value`:\n\nYou could also access the value `\"lenet\"` with `ModelName.lenet.value`.",
+    "heading_path": "Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Working with Python *enumerations* { #working-with-python-enumerations } > Get the *enumeration value* { #get-the-enumeration-value }",
+    "position": 16
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 72,
+    "text": "[Section: Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Working with Python *enumerations* { #working-with-python-enumerations } > Return *enumeration members* { #return-enumeration-members }]\n\nYou can return *enum members* from your *path operation*, even nested in a JSON body (e.g. a `dict`).\n\nThey will be converted to their corresponding values (strings in this case) before returning them to the client:\n\nIn your client you will get a JSON response like:\n\n```JSON\n{\n  \"model_name\": \"alexnet\",\n  \"message\": \"Deep Learning FTW!\"\n}\n```",
+    "heading_path": "Path Parameters { #path-parameters } > Predefined values { #predefined-values } > Working with Python *enumerations* { #working-with-python-enumerations } > Return *enumeration members* { #return-enumeration-members }",
+    "position": 17
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 73,
+    "text": "[Section: Path Parameters { #path-parameters } > Path parameters containing paths { #path-parameters-containing-paths }]\n\nLet's say you have a *path operation* with a path `/files/{file_path}`.\n\nBut you need `file_path` itself to contain a *path*, like `home/johndoe/myfile.txt`.\n\nSo, the URL for that file would be something like: `/files/home/johndoe/myfile.txt`.",
+    "heading_path": "Path Parameters { #path-parameters } > Path parameters containing paths { #path-parameters-containing-paths }",
+    "position": 18
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 74,
+    "text": "[Section: Path Parameters { #path-parameters } > Path parameters containing paths { #path-parameters-containing-paths } > OpenAPI support { #openapi-support }]\n\nOpenAPI doesn't support a way to declare a *path parameter* to contain a *path* inside, as that could lead to scenarios that are difficult to test and define.\n\nNevertheless, you can still do it in **FastAPI**, using one of the internal tools from Starlette.\n\nAnd the docs would still work, although not adding any documentation telling that the parameter should contain a path.",
+    "heading_path": "Path Parameters { #path-parameters } > Path parameters containing paths { #path-parameters-containing-paths } > OpenAPI support { #openapi-support }",
+    "position": 19
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 75,
+    "text": "[Section: Path Parameters { #path-parameters } > Path parameters containing paths { #path-parameters-containing-paths } > Path convertor { #path-convertor }]\n\nUsing an option directly from Starlette you can declare a *path parameter* containing a *path* using a URL like:\n\n```\n/files/{file_path:path}\n```\n\nIn this case, the name of the parameter is `file_path`, and the last part, `:path`, tells it that the parameter should match any *path*.\n\nSo, you can use it with:\n\nYou might need the parameter to contain `/home/johndoe/myfile.txt`, with a leading slash (`/`).\n\nIn that case, the URL would be: `/files//home/johndoe/myfile.txt`, with a double slash (`//`) between `files` and `home`.",
+    "heading_path": "Path Parameters { #path-parameters } > Path parameters containing paths { #path-parameters-containing-paths } > Path convertor { #path-convertor }",
+    "position": 20
+  },
+  {
+    "doc_name": "path-params.md",
+    "chunk_id": 76,
+    "text": "[Section: Path Parameters { #path-parameters } > Recap { #recap }]\n\nWith **FastAPI**, by using short, intuitive and standard Python type declarations, you get:\n\n* Editor support: error checks, autocompletion, etc.\n* Data \"<dfn title=\"converting the string that comes from an HTTP request into Python data\">parsing</dfn>\"\n* Data validation\n* API annotation and automatic documentation\n\nAnd you only have to declare them once.\n\nThat's probably the main visible advantage of **FastAPI** compared to alternative frameworks (apart from the raw performance).",
+    "heading_path": "Path Parameters { #path-parameters } > Recap { #recap }",
+    "position": 21
+  },
+  {
+    "doc_name": "query-params.md",
+    "chunk_id": 77,
+    "text": "[Section: Query Parameters { #query-parameters }]\n\nWhen you declare other function parameters that are not part of the path parameters, they are automatically interpreted as \"query\" parameters.\n\nThe query is the set of key-value pairs that go after the `?` in a URL, separated by `&` characters.\n\nFor example, in the URL:\n\n```\nhttp://127.0.0.1:8000/items/?skip=0&limit=10\n```\n\n...the query parameters are:\n\n* `skip`: with a value of `0`\n* `limit`: with a value of `10`\n\nAs they are part of the URL, they are \"naturally\" strings.\n\nBut when you declare them with Python types (in the example above, as `int`), they are converted to that type and validated against it.\n\nAll the same processes that apply to path parameters also apply to query parameters:",
+    "heading_path": "Query Parameters { #query-parameters }",
+    "position": 1
+  },
+  {
+    "doc_name": "query-params.md",
+    "chunk_id": 78,
+    "text": "[Section: Query Parameters { #query-parameters }]\n\n* Editor support (obviously)\n* Data <dfn title=\"converting the string that comes from an HTTP request into Python data\">\"parsing\"</dfn>\n* Data validation\n* Automatic documentation",
+    "heading_path": "Query Parameters { #query-parameters }",
+    "position": 2
+  },
+  {
+    "doc_name": "query-params.md",
+    "chunk_id": 79,
+    "text": "[Section: Query Parameters { #query-parameters } > Defaults { #defaults }]\n\nAs query parameters are not a fixed part of a path, they can be optional and can have default values.\n\nIn the example above they have default values of `skip=0` and `limit=10`.\n\nSo, going to the URL:\n\n```\nhttp://127.0.0.1:8000/items/\n```\n\nwould be the same as going to:\n\n```\nhttp://127.0.0.1:8000/items/?skip=0&limit=10\n```\n\nBut if you go to, for example:\n\n```\nhttp://127.0.0.1:8000/items/?skip=20\n```\n\nThe parameter values in your function will be:\n\n* `skip=20`: because you set it in the URL\n* `limit=10`: because that was the default value",
+    "heading_path": "Query Parameters { #query-parameters } > Defaults { #defaults }",
+    "position": 3
+  },
+  {
+    "doc_name": "query-params.md",
+    "chunk_id": 80,
+    "text": "[Section: Query Parameters { #query-parameters } > Optional parameters { #optional-parameters }]\n\nThe same way, you can declare optional query parameters, by setting their default to `None`:\n\nIn this case, the function parameter `q` will be optional, and will be `None` by default.\n\nAlso notice that **FastAPI** is smart enough to notice that the path parameter `item_id` is a path parameter and `q` is not, so, it's a query parameter.",
+    "heading_path": "Query Parameters { #query-parameters } > Optional parameters { #optional-parameters }",
+    "position": 4
+  },
+  {
+    "doc_name": "query-params.md",
+    "chunk_id": 81,
+    "text": "[Section: Query Parameters { #query-parameters } > Query parameter type conversion { #query-parameter-type-conversion }]\n\nYou can also declare `bool` types, and they will be converted:\n\nIn this case, if you go to:\n\n```\nhttp://127.0.0.1:8000/items/foo?short=1\n```\n\nor\n\n```\nhttp://127.0.0.1:8000/items/foo?short=True\n```\n\nor\n\n```\nhttp://127.0.0.1:8000/items/foo?short=true\n```\n\nor\n\n```\nhttp://127.0.0.1:8000/items/foo?short=on\n```\n\nor\n\n```\nhttp://127.0.0.1:8000/items/foo?short=yes\n```\n\nor any other case variation (uppercase, first letter in uppercase, etc), your function will see the parameter `short` with a `bool` value of `True`.\n\nValues such as `0`, `false`, `off`, and `no` (including case variations) are converted to `False`.\n\nIf `short` is omitted, **FastAPI** uses its default value, which is `False` in this example.",
+    "heading_path": "Query Parameters { #query-parameters } > Query parameter type conversion { #query-parameter-type-conversion }",
+    "position": 5
+  },
+  {
+    "doc_name": "query-params.md",
+    "chunk_id": 82,
+    "text": "[Section: Query Parameters { #query-parameters } > Query parameter type conversion { #query-parameter-type-conversion }]\n\nAn empty value (`?short=`) or an unrecognized value (for example, `?short=maybe`) produces a `422` validation error.",
+    "heading_path": "Query Parameters { #query-parameters } > Query parameter type conversion { #query-parameter-type-conversion }",
+    "position": 6
+  },
+  {
+    "doc_name": "query-params.md",
+    "chunk_id": 83,
+    "text": "[Section: Query Parameters { #query-parameters } > Multiple path and query parameters { #multiple-path-and-query-parameters }]\n\nYou can declare multiple path parameters and query parameters at the same time, **FastAPI** knows which is which.\n\nAnd you don't have to declare them in any specific order.\n\nThey will be detected by name:",
+    "heading_path": "Query Parameters { #query-parameters } > Multiple path and query parameters { #multiple-path-and-query-parameters }",
+    "position": 7
+  },
+  {
+    "doc_name": "query-params.md",
+    "chunk_id": 84,
+    "text": "[Section: Query Parameters { #query-parameters } > Required query parameters { #required-query-parameters }]\n\nWhen you declare a default value for non-path parameters (for now, we have only seen query parameters), then it is not required.\n\nIf you don't want to add a specific value but just make it optional, set the default as `None`.\n\nBut when you want to make a query parameter required, you can just not declare any default value:\n\nHere the query parameter `needy` is a required query parameter of type `str`.\n\nIf you open in your browser a URL like:\n\n```\nhttp://127.0.0.1:8000/items/foo-item\n```\n\n...without adding the required parameter `needy`, you will see an error like:\n\n```JSON\n{\n  \"detail\": [\n    {\n      \"type\": \"missing\",\n      \"loc\": [\n        \"query\",\n        \"needy\"\n      ],\n      \"msg\": \"Field required\",\n      \"input\": null\n    }\n  ]\n}\n```",
+    "heading_path": "Query Parameters { #query-parameters } > Required query parameters { #required-query-parameters }",
+    "position": 8
+  },
+  {
+    "doc_name": "query-params.md",
+    "chunk_id": 85,
+    "text": "[Section: Query Parameters { #query-parameters } > Required query parameters { #required-query-parameters }]\n\nAs `needy` is a required parameter, you would need to set it in the URL:\n\n```\nhttp://127.0.0.1:8000/items/foo-item?needy=sooooneedy\n```\n\n...this would work:\n\n```JSON\n{\n    \"item_id\": \"foo-item\",\n    \"needy\": \"sooooneedy\"\n}\n```\n\nAnd of course, you can define some parameters as required, some as having a default value, and some entirely optional:\n\nIn this case, there are 3 query parameters:\n\n* `needy`, a required `str`.\n* `skip`, an `int` with a default value of `0`.\n* `limit`, an optional `int`.\n\nYou could also use `Enum`s the same way as with [Path Parameters](path-params.md#predefined-values).",
+    "heading_path": "Query Parameters { #query-parameters } > Required query parameters { #required-query-parameters }",
+    "position": 9
+  }
+]
