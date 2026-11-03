@@ -75,6 +75,21 @@ with st.sidebar:
                 st.error(f"Error during upload: {e}")
 
     st.divider()
+    # --- Metadata Filter Dropdown ---
+    st.header("🔍 Search Filters")
+    try:
+        docs_resp = requests.get(f"{BACKEND_URL}/documents", timeout=2)
+        if docs_resp.status_code == 200:
+            all_docs = docs_resp.json().get("documents", [])
+            doc_options = ["All Documents"] + all_docs
+            selected_doc = st.selectbox("Restrict Search to Document:", doc_options)
+            # Map "All Documents" to None
+            active_doc_filter = None if selected_doc == "All Documents" else selected_doc
+        else:
+            active_doc_filter = None
+    except Exception:
+        active_doc_filter = None
+
     top_k = st.slider("Top-K Passages to Retrieve", min_value=1, max_value=8, value=4)
 
 
@@ -107,7 +122,11 @@ if user_query := st.chat_input("Ask a question about your docs..."):
             try:
                 resp = requests.post(
                     f"{BACKEND_URL}/ask",
-                    json={"question": user_query, "top_k": top_k},
+                    json={
+                        "question": user_query, 
+                        "top_k": top_k,
+                        "doc_filter": active_doc_filter  # <--- Pass filter to backend
+                    },
                     timeout=30
                 )
                 if resp.status_code == 200:
