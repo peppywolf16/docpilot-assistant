@@ -40,6 +40,9 @@ def run_evaluation(top_k: int = 4, retrieval_only: bool = False):
         gold_snippet = q.get("gold_passage")
         is_unanswerable = (q["type"] == "unanswerable")
 
+        # 0. Print progress so you can watch it evaluate
+        print(f"[{i:02d}/{len(questions)}] {q_id} ({q['type']}): {q_text[:45]}...")
+
         t0 = time.time()
 
         # 1. Retrieve
@@ -88,6 +91,10 @@ Answer:"""
             "latency_sec": round(elapsed, 4),
             "answer": answer.strip(),
         })
+
+        # --- Sleep 3.5s to stay under 15 requests per minute! ---
+        if i < len(questions):
+            time.sleep(3.5)
 
     answerable = [r for r in results if r["type"] != "unanswerable"]
     unanswerable = [r for r in results if r["type"] == "unanswerable"]

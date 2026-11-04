@@ -34,3 +34,6 @@ CHUNKER_STRATEGY = os.getenv("CHUNKER_STRATEGY", "markdown")
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 100
 DEFAULT_TOP_K = 4
+
+# Query Transformation Strategy: "none", "multi_query", "hyde", "step_back"
+QUERY_TRANSFORM_STRATEGY = os.getenv("QUERY_TRANSFORM_STRATEGY", "none")

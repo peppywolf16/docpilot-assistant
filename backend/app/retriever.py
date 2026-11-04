@@ -1,17 +1,18 @@
 import numpy as np
 from rank_bm25 import BM25Okapi
-from app.store_qdrant import client, COLLECTION_NAME, _scroll_all
+from app.store_qdrant import client, COLLECTION_NAME, _scroll_all, list_documents
 from app.embeddings import get_embedder
 from app.config import EMBEDDER_TYPE, EMBEDDING_DIM, DEFAULT_TOP_K
+from app.reranker import rerank
+from app.query.decomposition import decompose_query
+from app.query.filter_extractor import extract_query_filters
+from app.query.router import route_query
 
 embedder = get_embedder(EMBEDDER_TYPE, target_dim=EMBEDDING_DIM)
 
 
 def reciprocal_rank_fusion(dense_hits: list[dict], bm25_hits: list[dict], k: int = 60) -> list[dict]:
-    """
-    Fuses two ranked lists using Reciprocal Rank Fusion (RRF).
-    RRF Score = sum(1 / (k + rank_in_list)) for each list where the doc appears.
-    """
+    """Fuses two ranked lists using Reciprocal Rank Fusion (RRF)."""
     scores = {}
     doc_lookup = {}
 
@@ -24,13 +25,11 @@ def reciprocal_rank_fusion(dense_hits: list[dict], bm25_hits: list[dict], k: int
             if (doc_name, chunk_id) not in scores:
                 scores[(doc_name, chunk_id)] = 0.0
             
-            # RRF formula
             scores[(doc_name, chunk_id)] += 1.0 / (k + rank)
 
     _add_hits(dense_hits)
     _add_hits(bm25_hits)
 
-    # Sort by RRF score descending
     sorted_docs = sorted(scores.items(), key=lambda x: x[1], reverse=True)
 
     fused_results = []
@@ -46,16 +45,9 @@ def reciprocal_rank_fusion(dense_hits: list[dict], bm25_hits: list[dict], k: int
 def hybrid_search(
     query: str,
     top_k: int = DEFAULT_TOP_K,
-    doc_filter: str | None = None,
-    alpha: float = 0.5  # Weight between dense and sparse if needed
+    doc_filter: str | None = None
 ) -> list[dict]:
-    """
-    Performs Hybrid Search:
-    1. Dense vector search via Qdrant.
-    2. Sparse keyword search via BM25 over all loaded chunks.
-    3. Fuses results using Reciprocal Rank Fusion (RRF).
-    """
-    # 1. Dense Search (Qdrant)
+    """Performs Hybrid Search (Dense Qdrant + Sparse BM25 + RRF)."""
     q_vec = embedder.embed_query(query)
     
     q_filter = None
@@ -69,7 +61,7 @@ def hybrid_search(
         collection_name=COLLECTION_NAME,
         query=q_vec.tolist(),
         query_filter=q_filter,
-        limit=top_k * 2,  # fetch a larger pool for fusion
+        limit=top_k * 2,
     ).points
 
     dense_hits = []
@@ -82,13 +74,10 @@ def hybrid_search(
             "text": payload.get("text", ""),
         })
 
-    # 2. Sparse Search (BM25)
-    # Scroll all chunks from Qdrant to build BM25 index on the fly
     all_records = _scroll_all(with_payload=True)
     if not all_records:
         return dense_hits[:top_k]
 
-    # Filter records if doc_filter is active
     filtered_records = []
     for r in all_records:
         payload = r.payload or {}
@@ -99,20 +88,17 @@ def hybrid_search(
     if not filtered_records:
         return dense_hits[:top_k]
 
-    # Tokenize corpus for BM25 (simple whitespace / lowercase tokenization)
     tokenized_corpus = [doc["text"].lower().split() for doc in filtered_records]
     bm25 = BM25Okapi(tokenized_corpus)
 
     tokenized_query = query.lower().split()
     bm25_scores = bm25.get_scores(tokenized_query)
-    
-    # Get top indices from BM25
     top_bm25_indices = np.argsort(bm25_scores)[::-1][: top_k * 2]
 
     bm25_hits = []
     for idx in top_bm25_indices:
         if bm25_scores[idx] <= 0:
-            continue  # Skip zero-score matches
+            continue
         doc = filtered_records[idx]
         bm25_hits.append({
             "doc": doc.get("doc_name", "unknown"),
@@ -121,6 +107,66 @@ def hybrid_search(
             "text": doc.get("text", ""),
         })
 
-    # 3. Fuse via RRF
     fused = reciprocal_rank_fusion(dense_hits, bm25_hits)
     return fused[:top_k]
+
+
+def smart_search(
+    query: str,
+    top_k: int = DEFAULT_TOP_K,
+    doc_filter: str | None = None,
+    candidate_pool_size: int = 20
+) -> list[dict]:
+    """
+    Day 10 Smart Search Pipeline:
+    1. Filter Extraction: detects file references and applies doc_filter.
+    2. Intent Routing & Decomposition: breaks multi-part queries into sub-questions.
+    3. Hybrid retrieval + RRF fusion for each sub-question.
+    4. Cross-Encoder re-ranking against original query.
+    5. Fallback: if filtered search returns < 2 chunks, retries unfiltered.
+    """
+    available_docs = list_documents()
+    
+    # 1. Automatic Filter Extraction if no manual filter provided
+    active_filter = doc_filter
+    clean_query = query
+    if not active_filter:
+        extracted_filter, clean_query = extract_query_filters(query, available_docs)
+        active_filter = extracted_filter
+
+    # 2. Check Intent / Decomposition
+    sub_questions = decompose_query(clean_query)
+
+    # 3. Retrieve candidate pools
+    all_candidate_lists = []
+    for sub_q in sub_questions:
+        hits = hybrid_search(query=sub_q, top_k=candidate_pool_size, doc_filter=active_filter)
+        all_candidate_lists.append(hits)
+
+    # Merge candidates across sub-questions
+    merged_candidates = all_candidate_lists[0] if all_candidate_lists else []
+    for next_list in all_candidate_lists[1:]:
+        merged_candidates = reciprocal_rank_fusion(merged_candidates, next_list)
+
+    candidates = merged_candidates[:candidate_pool_size]
+
+    # 4. Safety Fallback: If filtered search found too few results, search unfiltered
+    if active_filter and len(candidates) < 2:
+        print(f"Notice: Filtered search on '{active_filter}' returned few results. Falling back to unfiltered.")
+        return smart_search(query=clean_query, top_k=top_k, doc_filter=None, candidate_pool_size=candidate_pool_size)
+
+    if not candidates:
+        return []
+
+    # 5. Cross-Encoder re-ranks against the ORIGINAL question
+    final_passages = rerank(
+        query=query,
+        passages=candidates,
+        top_k=top_k
+    )
+
+    return final_passages
+
+
+# Alias for drop-in compatibility
+two_stage_search = smart_search

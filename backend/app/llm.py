@@ -26,8 +26,8 @@ CHAT_MODEL = "gemini-3.5-flash-lite"
 CACHE_DIR = Path(__file__).resolve().parent.parent
 cache = Cache(str(CACHE_DIR))
 
-def retry_with_backoff(fn, max_retries=3, initial_delay=2.0):
-    """Retries a call if rate-limited or if a temporary network error occurs."""
+def retry_with_backoff(fn, max_retries=5, initial_delay=2.0):
+    """Retries a call if rate-limited (429) or on temporary network errors."""
     delay = initial_delay
     for attempt in range(max_retries):
         try:
@@ -35,9 +35,18 @@ def retry_with_backoff(fn, max_retries=3, initial_delay=2.0):
         except Exception as e:
             if attempt == max_retries - 1:
                 raise e
-            print(f"Notice: API error ({e}). Retrying in {delay}s...")
-            time.sleep(delay)
-            delay *= 2
+            err_str = str(e).lower()
+            if "429" in err_str or "resource_exhausted" in err_str:
+                # Google rate limits reset over 1-minute windows; wait 20s
+                sleep_time = max(delay, 20.0)
+                print(f"Notice: Rate limit (429) hit. Waiting {sleep_time:.1f}s for quota window to reset...")
+                time.sleep(sleep_time)
+                delay *= 2
+            else:
+                print(f"Notice: API error ({e}). Retrying in {delay}s...")
+                time.sleep(delay)
+                delay *= 2
+
 
 def embed(texts: list[str], mode: str = "document") -> np.ndarray:
     """

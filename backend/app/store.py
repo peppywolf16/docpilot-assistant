@@ -5,8 +5,7 @@ from app.store_qdrant import (
     client,
     COLLECTION_NAME,
 )
-from app.retriever import hybrid_search as search
-
+from app.retriever import smart_search as search
 class _ChunksProxy:
     def __len__(self) -> int:
         try:

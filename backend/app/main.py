@@ -4,6 +4,7 @@ from app.config import DEFAULT_TOP_K
 from app.loader import load_text_from_bytes
 from app.store import add_document, delete_document, list_documents, search, CHUNKS
 from app.llm import generate
+from app.query.router import route_query
 
 app = FastAPI(title="DocPilot API", version="0.1.0")
 
@@ -64,9 +65,22 @@ async def ingest_files(files: list[UploadFile] = File(...)):
 
 
 @app.post("/ask")
+@app.post("/ask")
 def ask_question(request: AskRequest):
-    """Searches persistent index with optional metadata filtering and generates an answer."""
-    # Pass doc_filter into search()
+    """Answers questions with routing, automatic filter extraction, and grounded citations."""
+    
+    # 1. Check intent route
+    route = route_query(request.question)
+    
+    # Fast path: If it's just a greeting or general pleasantry, skip search completely!
+    if route == "direct_chat":
+        chat_prompt = f"You are DocPilot, a helpful technical documentation assistant. Respond pleasantly and briefly to the user's message: '{request.question}'"
+        return {
+            "answer": generate(chat_prompt).strip(),
+            "sources": []
+        }
+
+    # 2. Technical question: Run smart two-stage search (decomposition + filter extraction)
     passages = search(
         query=request.question, 
         top_k=request.top_k, 
@@ -105,4 +119,3 @@ Answer:"""
         "answer": answer.strip(),
         "sources": passages,
     }
-
