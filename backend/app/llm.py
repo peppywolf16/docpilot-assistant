@@ -117,3 +117,31 @@ def generate(prompt: str) -> str:
     cache[cache_key] = answer
     return answer
 
+def generate_stream(prompt: str):
+    """
+    Streams generated text tokens from Gemini 3.5 Flash Lite in real-time.
+    """
+    def _call():
+        response = client.models.generate_content_stream(
+            model=CHAT_MODEL,
+            contents=prompt,
+        )
+        for chunk in response:
+            if chunk.text:
+                yield chunk.text
+
+    # Wrap in generator wrapper for backoff handling
+    try:
+        response_stream = client.models.generate_content_stream(
+            model=CHAT_MODEL,
+            contents=prompt,
+        )
+        for chunk in response_stream:
+            if chunk.text:
+                yield chunk.text
+    except Exception as e:
+        print(f"Streaming error: {e}")
+        # Fallback to standard generate if stream drops
+        yield generate(prompt)
+
+

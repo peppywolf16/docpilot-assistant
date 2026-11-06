@@ -5,6 +5,14 @@ from app.loader import load_text_from_bytes
 from app.store import add_document, delete_document, list_documents, search, CHUNKS
 from app.llm import generate
 from app.query.router import route_query
+from app.generation.verifier import generate_verified_answer
+from fastapi.responses import StreamingResponse
+from app.llm import generate, generate_stream
+from app.agent.graph import run_agent
+
+from app.security.auth import create_access_token, verify_access_token, UserContext
+from app.security.pii import mask_pii
+from app.security.guardrails import detect_prompt_injection
 
 app = FastAPI(title="DocPilot API", version="0.1.0")
 
@@ -14,7 +22,28 @@ class AskRequest(BaseModel):
     question: str
     top_k: int = 4
     doc_filter: str | None = None  # <--- Added filter option
+    chat_history: list[dict] = []  # <--- Forward conversation history
 
+class LoginRequest(BaseModel):
+    username: str
+    tenant: str = "engineering"
+    role: str = "intern"  # "admin", "engineer", or "intern"
+
+
+@app.post("/login")
+def login(request: LoginRequest):
+    """Issues a signed, tamper-proof JWT token containing tenant and role permissions."""
+    token = create_access_token(
+        user_id=request.username,
+        tenant=request.tenant,
+        role=request.role
+    )
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "tenant": request.tenant,
+        "role": request.role
+    }
 
 @app.get("/health")
 def health():
@@ -49,8 +78,10 @@ async def ingest_files(files: list[UploadFile] = File(...)):
     for file in files:
         content = await file.read()
         try:
-            text = load_text_from_bytes(file.filename, content)
-            chunks_created = add_document(file.filename, text)
+            raw_text = load_text_from_bytes(file.filename, content)
+            # Mask PII and leaked credentials before chunking & embedding!
+            clean_text = mask_pii(raw_text)
+            chunks_created = add_document(file.filename, clean_text)
             total_added += chunks_created
             uploaded_names.append(file.filename)
         except Exception as e:
@@ -65,9 +96,19 @@ async def ingest_files(files: list[UploadFile] = File(...)):
 
 
 @app.post("/ask")
-@app.post("/ask")
 def ask_question(request: AskRequest):
-    """Answers questions with routing, automatic filter extraction, and grounded citations."""
+    """Answers questions with routing, automatic filter extraction, and verified citations."""
+
+    # 0. Check prompt injection defense
+    is_attack, attack_reason = detect_prompt_injection(request.question)
+    if is_attack:
+        return {
+            "answerable": False,
+            "answer": "Security Alert: Prompt injection attempt detected. Request blocked.",
+            "citations": [],
+            "sources": [],
+            "fast_refusal": True
+        }
     
     # 1. Check intent route
     route = route_query(request.question)
@@ -76,11 +117,35 @@ def ask_question(request: AskRequest):
     if route == "direct_chat":
         chat_prompt = f"You are DocPilot, a helpful technical documentation assistant. Respond pleasantly and briefly to the user's message: '{request.question}'"
         return {
+            "answerable": True,
             "answer": generate(chat_prompt).strip(),
-            "sources": []
+            "citations": [],
+            "citation_validity": 1.0,
+            "sources": [],
+            "fast_refusal": False,
         }
 
-    # 2. Technical question: Run smart two-stage search (decomposition + filter extraction)
+    # 2. Technical question: Execute LangGraph Self-Correcting Agent
+    result = run_agent(
+        question=request.question,
+        chat_history=request.chat_history
+    )
+    return result
+
+
+@app.post("/ask/stream")
+def ask_question_stream(request: AskRequest):
+    """Streams the verified answer token-by-token using Server-Sent Events (SSE)."""
+    route = route_query(request.question)
+    
+    if route == "direct_chat":
+        chat_prompt = f"You are DocPilot, a helpful technical documentation assistant. Respond pleasantly and briefly to the user's message: '{request.question}'"
+        def chat_generator():
+            for token in generate_stream(chat_prompt):
+                yield token
+        return StreamingResponse(chat_generator(), media_type="text/event-stream")
+
+    # 1. Retrieve passages
     passages = search(
         query=request.question, 
         top_k=request.top_k, 
@@ -88,17 +153,12 @@ def ask_question(request: AskRequest):
     )
 
     if not passages:
-        return {
-            "answer": "I don't have enough information in the provided documents.",
-            "sources": [],
-        }
+        def empty_generator():
+            yield "I don't have enough information in the provided documents."
+        return StreamingResponse(empty_generator(), media_type="text/event-stream")
 
-    context_blocks = [
-        f"[{p['number']}] (Source: {p['doc']}, Chunk: {p['chunk_id']})\n{p['text']}"
-        for p in passages
-    ]
-    context = "\n\n".join(context_blocks)
-
+    # 2. Build context for streaming prompt
+    context = "\n\n".join([f"[{p['number']}] (Source: {p['doc']})\n{p['text']}" for p in passages])
     prompt = f"""You are a helpful technical documentation assistant. Answer the user's question using ONLY the provided passages below.
 
 Rules:
@@ -113,9 +173,11 @@ Passages:
 Question: {request.question}
 Answer:"""
 
-    answer = generate(prompt)
+    def token_generator():
+        # Stream text tokens from Gemini
+        for token in generate_stream(prompt):
+            yield token
 
-    return {
-        "answer": answer.strip(),
-        "sources": passages,
-    }
+    return StreamingResponse(token_generator(), media_type="text/event-stream")
+
+

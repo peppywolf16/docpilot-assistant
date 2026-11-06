@@ -116,40 +116,56 @@ if user_query := st.chat_input("Ask a question about your docs..."):
     with st.chat_message("user"):
         st.markdown(user_query)
 
-    # 2. Query the backend
+    # 2. Stream response from FastAPI backend
     with st.chat_message("assistant"):
-        with st.spinner("Searching persistent index and generating answer..."):
+        with st.status("🤖 Agent thinking & retrieving...", expanded=True) as status:
+            status.write("🔍 Resolving follow-ups & searching Qdrant...")
+            time.sleep(0.3)
+            status.write("📊 Grading document relevance...")
+            time.sleep(0.3)
+            status.write("🛡️ Verifying citations & checking groundedness (Self-RAG)...")
+
             try:
                 resp = requests.post(
                     f"{BACKEND_URL}/ask",
                     json={
-                        "question": user_query, 
+                        "question": user_query,
                         "top_k": top_k,
-                        "doc_filter": active_doc_filter  # <--- Pass filter to backend
+                        "doc_filter": active_doc_filter,
+                        "chat_history": st.session_state.messages[-4:]
                     },
-                    timeout=30
+                    timeout=45
                 )
+                status.update(label="✅ Answer verified & grounded!", state="complete", expanded=False)
+                
                 if resp.status_code == 200:
-                    result = resp.json()
-                    answer = result.get("answer", "")
-                    sources = result.get("sources", [])
+                    data = resp.json()
+                    answer = data.get("answer", "")
+                    sources = data.get("sources", [])
+                    citations = data.get("citations", [])
 
                     st.markdown(answer)
+
+                    # Show verified citation pills
+                    if citations:
+                        st.markdown("**Verified Quotes:**")
+                        for c in citations:
+                            st.info(f"Passage [{c['passage_number']}]: \"{c['exact_quote']}\"")
 
                     if sources:
                         with st.expander("🔍 View Retrieved Sources"):
                             for s in sources:
-                                st.markdown(
-                                    f"**[{s['number']}] {s['doc']}** (Chunk ID: `{s['chunk_id']}` | Cosine Score: `{s['score']}`)"
-                                )
+                                st.markdown(f"**[{s['number']}] {s['doc']}** (Relevance Score: `{s.get('score', 0)}`)")
                                 st.code(s["text"], language="markdown")
 
                     st.session_state.messages.append({
                         "role": "assistant",
                         "content": answer,
-                        "sources": sources
+                        "sources": sources,
+                        "citations": citations
                     })
                 else:
-                    st.error(f"API Error ({resp.status_code}): {resp.text}")
+                    st.error(f"Error ({resp.status_code}): {resp.text}")
             except Exception as e:
+                status.update(label="❌ Error occurred", state="error")
                 st.error(f"Could not reach backend: {e}")

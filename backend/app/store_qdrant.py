@@ -3,6 +3,8 @@ import uuid
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
+from app.config import USE_PARENT_CHILD
+from app.chunking.parent_child import split_parent_child
 
 from app.config import (
     INDEX_DIR,
@@ -110,89 +112,127 @@ def delete_document(doc_name: str) -> bool:
 
 
 def add_document(name: str, text: str, version: str = "v1.0") -> int:
-    """Chunks, embeds, and upserts a document into Qdrant with metadata. Returns chunk count."""
+    """Chunks, embeds, and upserts a document into Qdrant with metadata."""
     _ensure_collection()
-
-    # 1. Deduplication: remove the old copy of this document if it exists
     delete_document(name)
 
-    # 2. Chunk text
-    chunker = get_chunker(CHUNKER_STRATEGY, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP)
-    chunk_dicts = chunker.split(text)
-    if not chunk_dicts:
-        return 0
-
-    texts = [c["text"] for c in chunk_dicts]
-
-    # 3. Embed chunks
-    vectors = embedder.embed_documents(texts)
-
-    # 4. Build points with UUID ids (safe against collisions after deletions)
+    existing_count = client.count(collection_name=COLLECTION_NAME, exact=True).count
     points = []
-    for i, (c, vec) in enumerate(zip(chunk_dicts, vectors)):
-        payload = {
-            "doc_name": name,
-            "chunk_id": i + 1,  # position within this document
-            "text": c["text"],
-            "heading_path": c.get("heading_path", "N/A"),
-            "position": c.get("position", i + 1),
-            "version": version,
-        }
-        points.append(
-            models.PointStruct(
-                id=str(uuid.uuid4()),
-                vector=vec.tolist(),
-                payload=payload,
-            )
-        )
 
-    # 5. Upsert into Qdrant
-    client.upsert(collection_name=COLLECTION_NAME, points=points)
+    if USE_PARENT_CHILD:
+        # Parent-Document Mode: embed small child chunks, store parent section in payload
+        parents_lookup, child_dicts = split_parent_child(text, name)
+        if not child_dicts:
+            return 0
 
-    return len(chunk_dicts)
+        texts_to_embed = [c["text"] for c in child_dicts]
+        vectors = embedder.embed_documents(texts_to_embed)
 
+        for i, (c, vec) in enumerate(zip(child_dicts, vectors)):
+            point_id = existing_count + i + 1
+            payload = {
+                "doc_name": name,
+                "chunk_id": point_id,
+                "text": c["text"],                       # child text (for search/BM25)
+                "parent_id": c["parent_id"],
+                "parent_text": parents_lookup[c["parent_id"]], # full parent context (for LLM)
+                "heading_path": c.get("heading_path", "N/A"),
+                "version": version,
+            }
+            points.append(models.PointStruct(id=str(uuid.uuid4()), vector=vec.tolist(), payload=payload))
+
+        client.upsert(collection_name=COLLECTION_NAME, points=points)
+        return len(child_dicts)
+
+    else:
+        # Standard Chunking Mode
+        chunker = get_chunker(CHUNKER_STRATEGY, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP)
+        chunk_dicts = chunker.split(text)
+        if not chunk_dicts:
+            return 0
+
+        texts = [c["text"] for c in chunk_dicts]
+        vectors = embedder.embed_documents(texts)
+
+        for i, (c, vec) in enumerate(zip(chunk_dicts, vectors)):
+            point_id = existing_count + i + 1
+            payload = {
+                "doc_name": name,
+                "chunk_id": point_id,
+                "text": c["text"],
+                "heading_path": c.get("heading_path", "N/A"),
+                "position": c.get("position", i + 1),
+                "version": version,
+            }
+            points.append(models.PointStruct(id=str(uuid.uuid4()), vector=vec.tolist(), payload=payload))
+
+        client.upsert(collection_name=COLLECTION_NAME, points=points)
+        return len(chunk_dicts)
 
 def search(
     query: str,
     top_k: int = DEFAULT_TOP_K,
     doc_filter: str | None = None,
     version_filter: str | None = None,
+    user_tenant: str | None = None,       # <--- Mandatory ACL filter
+    allowed_role: str | None = None,       # <--- Mandatory RBAC filter
 ) -> list[dict]:
     """
-    Vector search with optional metadata filters
-    (restrict to one document and/or one version).
+    Vector search with mandatory metadata and multi-tenancy ACL filters.
     """
     _ensure_collection()
-
     q_vec = embedder.embed_query(query)
 
     conditions = []
     if doc_filter:
-        conditions.append(
-            models.FieldCondition(key="doc_name", match=models.MatchValue(value=doc_filter))
-        )
+        conditions.append(models.FieldCondition(key="doc_name", match=models.MatchValue(value=doc_filter)))
     if version_filter:
-        conditions.append(
-            models.FieldCondition(key="version", match=models.MatchValue(value=version_filter))
-        )
+        conditions.append(models.FieldCondition(key="version", match=models.MatchValue(value=version_filter)))
+    
+    # Enterprise Access Control (Multi-Tenancy & RBAC)
+    if user_tenant:
+        conditions.append(models.FieldCondition(key="tenant", match=models.MatchValue(value=user_tenant)))
+    if allowed_role:
+        # User role must be present in the document's allowed_roles list
+        conditions.append(models.FieldCondition(key="allowed_roles", match=models.MatchAny(any=[allowed_role])))
+
     q_filter = models.Filter(must=conditions) if conditions else None
 
     hits = client.query_points(
         collection_name=COLLECTION_NAME,
         query=q_vec.tolist(),
         query_filter=q_filter,
-        limit=top_k,
+        limit=top_k * 3 if USE_PARENT_CHILD else top_k,
     ).points
 
     results = []
-    for rank, hit in enumerate(hits, start=1):
+    seen_parents = set()
+
+    for hit in hits:
         payload = hit.payload or {}
+        
+        if USE_PARENT_CHILD:
+            parent_id = payload.get("parent_id")
+            if parent_id and parent_id in seen_parents:
+                continue
+            if parent_id:
+                seen_parents.add(parent_id)
+            passage_text = payload.get("parent_text", payload.get("text", ""))
+        else:
+            passage_text = payload.get("text", "")
+
         results.append({
-            "number": rank,
+            "number": len(results) + 1,
             "doc": payload.get("doc_name", "unknown"),
             "chunk_id": payload.get("chunk_id", 0),
             "score": round(float(hit.score), 4),
-            "text": payload.get("text", ""),
+            "text": passage_text,
+            "tenant": payload.get("tenant", "public"),
+            "allowed_roles": payload.get("allowed_roles", ["all"]),
         })
 
+        if len(results) >= top_k:
+            break
+
     return results
+

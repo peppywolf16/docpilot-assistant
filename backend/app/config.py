@@ -37,3 +37,6 @@ DEFAULT_TOP_K = 4
 
 # Query Transformation Strategy: "none", "multi_query", "hyde", "step_back"
 QUERY_TRANSFORM_STRATEGY = os.getenv("QUERY_TRANSFORM_STRATEGY", "none")
+
+# Parent-Document Retrieval Flag
+USE_PARENT_CHILD = os.getenv("USE_PARENT_CHILD", "false").lower() == "true"
