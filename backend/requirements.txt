@@ -8,3 +8,8 @@ requests
 pypdf
 diskcache
 sentence-transformers
+qdrant-client
+rank-bm25
+pyjwt
+slowapi
+langgraph

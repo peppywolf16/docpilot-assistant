@@ -1,0 +1,17 @@
+
+# Python environments
+myenv/
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Secrets
+.env
+.env.*
+
+# Git
+.git/

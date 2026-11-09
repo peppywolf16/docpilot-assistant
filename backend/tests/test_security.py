@@ -78,3 +78,27 @@ def test_access_control_filter_simulation():
     assert "public_guide.md" in visible_docs
     assert "admin_secrets.md" not in visible_docs      # RBAC blocked!
     assert "finance_payroll.md" not in visible_docs    # Multi-tenancy blocked!
+
+
+
+
+from app.infra.cache import build_cache_key, set_cached_response, get_cached_response
+
+
+def test_cache_leak_prevention():
+    """Verify that cached answers for Tenant A are strictly inaccessible to Tenant B."""
+    shared_query = "What is the internal API gateway URL?"
+
+    # Cache an answer for Tenant A (Engineering)
+    tenant_a_data = {"answer": "https://internal-eng.gateway.local"}
+    set_cached_response(shared_query, tenant_a_data, tenant="engineering", role="admin")
+
+    # Tenant A accesses it -> Cache Hit
+    assert get_cached_response(shared_query, tenant="engineering", role="admin") is not None
+    assert get_cached_response(shared_query, tenant="engineering", role="admin")["answer"] == "https://internal-eng.gateway.local"
+
+    # Tenant B (Finance) asks the EXACT same query -> Cache Miss (No cross-tenant leak!)
+    assert get_cached_response(shared_query, tenant="finance", role="admin") is None
+
+    # An intern in Tenant A asks the same query -> Cache Miss (No role escalation leak!)
+    assert get_cached_response(shared_query, tenant="engineering", role="intern") is None

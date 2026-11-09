@@ -14,8 +14,19 @@ from app.security.auth import create_access_token, verify_access_token, UserCont
 from app.security.pii import mask_pii
 from app.security.guardrails import detect_prompt_injection
 
+from starlette.requests import Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+from app.infra.cache import get_cached_response, set_cached_response
+from app.infra.budget import check_token_budget, record_token_usage
+
 app = FastAPI(title="DocPilot API", version="0.1.0")
 
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Request schema for /ask
 class AskRequest(BaseModel):
@@ -94,44 +105,75 @@ async def ingest_files(files: list[UploadFile] = File(...)):
         "total_chunks": len(CHUNKS),
     }
 
-
 @app.post("/ask")
-def ask_question(request: AskRequest):
-    """Answers questions with routing, automatic filter extraction, and verified citations."""
+@limiter.limit("20/minute")
+def ask_question(request: Request, body: AskRequest):
+    """Answers questions with cache checks, budget checks, rate-limiting, and LangGraph agent."""
+    
+    tenant = getattr(body, "tenant", "engineering")
+    role = getattr(body, "role", "engineer")
 
     # 0. Check prompt injection defense
-    is_attack, attack_reason = detect_prompt_injection(request.question)
+    is_attack, attack_reason = detect_prompt_injection(body.question)
     if is_attack:
         return {
             "answerable": False,
             "answer": "Security Alert: Prompt injection attempt detected. Request blocked.",
             "citations": [],
             "sources": [],
-            "fast_refusal": True
+            "fast_refusal": True,
         }
-    
-    # 1. Check intent route
-    route = route_query(request.question)
-    
-    # Fast path: If it's just a greeting or general pleasantry, skip search completely!
+
+    # 1. Check Tenant Token Budget
+    allowed, used_tokens, limit = check_token_budget(tenant, requested_tokens=150)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Daily token quota exceeded for tenant '{tenant}' ({used_tokens}/{limit} tokens used)."
+        )
+
+    # 2. Check Cache (Exact + Semantic)
+    cached_data, match_type = get_cached_response(body.question, tenant=tenant, role=role)
+    if cached_data:
+        cached_data["cached"] = True
+        cached_data["cache_type"] = match_type
+        return cached_data
+
+    # 3. Fast path: Direct chat greetings
+    route = route_query(body.question)
     if route == "direct_chat":
-        chat_prompt = f"You are DocPilot, a helpful technical documentation assistant. Respond pleasantly and briefly to the user's message: '{request.question}'"
+        chat_prompt = f"You are DocPilot, a helpful technical documentation assistant. Respond pleasantly and briefly: '{body.question}'"
+        answer = generate(chat_prompt).strip()
+        record_token_usage(tenant, tokens_used=50)
         return {
             "answerable": True,
-            "answer": generate(chat_prompt).strip(),
+            "answer": answer,
             "citations": [],
-            "citation_validity": 1.0,
             "sources": [],
             "fast_refusal": False,
+            "cached": False,
         }
 
-    # 2. Technical question: Execute LangGraph Self-Correcting Agent
+    # 4. Technical Question: Execute LangGraph Self-Correcting Agent
     result = run_agent(
-        question=request.question,
-        chat_history=request.chat_history
+        question=body.question,
+        chat_history=body.chat_history
     )
-    return result
 
+    # Record token usage (estimate based on context + answer length)
+    est_tokens = len(body.question.split()) * 2 + len(result.get("answer", "").split()) * 2 + 300
+    record_token_usage(tenant, tokens_used=est_tokens)
+
+    # Save to Cache for future queries
+    set_cached_response(
+        question=body.question,
+        response_data=result,
+        tenant=tenant,
+        role=role,
+    )
+    result["cached"] = False
+
+    return result
 
 @app.post("/ask/stream")
 def ask_question_stream(request: AskRequest):

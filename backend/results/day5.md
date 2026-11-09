@@ -1,4 +1,4 @@
-# Day 5 Sprint: Trust, Streaming, Agentic LangGraph & Enterprise Security (Roadmap Days 11–16)
+# Day 5 Sprint: Streaming, Agentic LangGraph, Security & Caching (Roadmap Days 11–17)
 
 ## Executive Summary
 Calendar Day 5 was the most comprehensive development sprint of the project, elevating DocPilot from an advanced search pipeline into an autonomous, trustworthy, real-time streaming, and enterprise-hardened AI system:
@@ -8,7 +8,7 @@ Calendar Day 5 was the most comprehensive development sprint of the project, ele
 4. **LangGraph Agent with Self-Correction (Day 14 - CRAG):** Wrapped the pipeline in a stateful cyclic graph that evaluates retrieved document relevance using Cross-Encoder logits and LLM scoring, conditionally rewriting queries and retrying when relevance is poor.
 5. **Conversation Memory & Self-RAG (Day 15):** Implemented multi-turn conversation memory with `MemorySaver` checkpointer and `thread_id`, pronoun resolution (`"Can it also accept an Enum?"` $\rightarrow$ `"Can FastAPI path parameters accept an Enum?"`), an independent `check_support_node` hallucination checker, and exported a visual Mermaid state machine diagram.
 6. **Enterprise Security & Multi-Tenancy (Day 16):** Built cryptographically verified JWT authentication (`/login`), mandatory Qdrant multi-tenancy ACL filters (`tenant` and `allowed_roles`), automated PII/credential scrubbing at ingestion (`mask_pii`), prompt injection detection, untrusted context boundary framing, and achieved a **100% pass rate (5/5)** on our automated pytest security test suite.
-
+7. **Production Hardening & Caching (Day 17):** Implemented a tenant-safe dual-tier disk cache (`app/infra/cache.py` with exact hash + semantic vector matching threshold $\ge 0.96$), verified zero cross-tenant cache leaks via automated pytest, enforced API rate-limiting (`slowapi` at 20 req/min), tracked daily tenant token budgets, and containerized the entire stack via Docker and Docker Compose.
 ---
 
 ## 1. Smarter Indexing & Verified Citations (Roadmap Days 11 & 12)
@@ -93,7 +93,20 @@ tests/test_security.py::test_access_control_filter_simulation PASSED [100%]
 ============================== 5 passed in 1.50s ===============================
 ---
 
-## 5. Cumulative Ablation Table (Full Progress)
+# 5. Production Hardening, Caching & Containerization (Roadmap Day 17)
+## A. Tenant-Safe Dual-Tier Caching (app/infra/cache.py)
+- Exact Hash Match: Cryptographically hashes tenant + role + prompt_version + query (SHA-256) for instant sub-millisecond retrieval.
+- Semantic Cache: If exact search misses, embeds the query and computes cosine similarity against recent tenant queries. If similarity is ≥ 0.96 ≥ 0.96
+, returns cached responses instantly without running the LangGraph agent.
+- Cache-Leak Prevention: Verified via pytest (test_cache_leak_prevention) that Tenant B (Finance) or an intern cannot access cached answers belonging to Tenant A (Engineering).
+## B. Rate Limiting & Token Budgets (app/main.py & app/infra/budget.py)
+- API Rate Limiter: Protected FastAPI endpoints using slowapi (@limiter.limit("20/minute")) to prevent abuse and infinite frontend loops.
+- Daily Token Budgets: Tracks and caps token consumption per tenant against a daily quota (50,000 tokens/day).
+## C. Containerization (Dockerfile & docker-compose.yml)
+- Packaged FastAPI backend and Streamlit frontend into lightweight Python 3.11 slim containers.
+- Configured Docker Compose volumes to persist Qdrant vector storage and disk cache across container restarts.
+
+## 6. Cumulative Ablation Table (Full Progress)
 
 | Sprint / Day | Version / Milestone | Hit@4 (Recall) | MRR | Correct Refusal | Answer Rate | Latency | Core Innovation |
 |:---:|:---|:---:|:---:|:---:|:---:|:---:|:---|
@@ -101,11 +114,11 @@ tests/test_security.py::test_access_control_filter_simulation PASSED [100%]
 | **Day 2** | Markdown Chunker (800c) + Disk Persistence | 58.8% | 0.441 | 100.0% | 94.1% | 1.01s | Structure-aware heading injection. |
 | **Day 3** | BGE Embeddings & Qdrant Vector DB | 58.8% | 0.441 | 100.0% | 94.1% | 12.4ms | Production vector database + payload filtering. |
 | **Day 4** | Two-Stage Re-ranking & Query Rewriting (v0.5) | 52.9% | 0.446 | 100.0% | 94.1% | 686ms | Neural Cross-Encoder & Multi-Query shootout. |
-| **Day 5** | **Agentic LangGraph, Streaming & Security** | **58.8%** | **0.441** | **100.0%** | **100.0%** | **Real-Time** | **LangGraph CRAG state machine, memory, verified quotes (1.0 validity), and 100% security test pass.** |
+| **Day 5** | **Agentic LangGraph, Streaming, Security & Caching** | **58.8%** | **0.441** | **100.0%** | **100.0%** | **Real-Time(Instant)** | **LangGraph CRAG state machine, memory, verified quotes (1.0 validity), dual-tier cache,rate-limiting, and Docker.** |
 
 ---
 
-## 6. Current Repository Layout
+## 7. Current Repository Layout
 
 ```text
 docpilot/
@@ -165,7 +178,70 @@ docpilot/
 │   │   └── test_security.py    # Automated security test suite (5 passed in 1.50s)
 │   ├── scripts/
 │   │   └── ingest_folder.py    # CLI tool to bulk-index document folders
+│   ├── .cache/                 # Pdocpilot/
+├── backend/
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── config.py           # Configuration & feature flags
+│   │   ├── llm.py              # Gemini embedding/generation, streaming & diskcache
+│   │   ├── loader.py           # Multi-format text extractor (.md, .txt, .pdf)
+│   │   ├── store.py            # Store adapter routing to Qdrant & Smart Search
+│   │   ├── store_qdrant.py     # Qdrant client, metadata payloads & ACL filters
+│   │   ├── retriever.py        # Smart Two-Stage Search: Hybrid + Decomposition + Re-ranking
+│   │   ├── reranker.py         # Cross-Encoder neural re-ranker, deduplication & Lost-in-the-Middle
+│   │   ├── main.py             # FastAPI backend with JWT auth, streaming, doc management & filters
+│   │   ├── agent/              # LangGraph state machine package
+│   │   │   ├── __init__.py
+│   │   │   └── graph.py        # CRAG loop, memory condensation, checkpointer & Self-RAG
+│   │   ├── chunking/           # Modular chunking package (Base, Cleaner, Markdown, Parent-Child)
+│   │   ├── embeddings/         # Modular embeddings package (Base, Gemini, BGE, Registry)
+│   │   ├── generation/         # Trustworthy generation package
+│   │   │   ├── __init__.py
+│   │   │   ├── schemas.py      # Pydantic schemas (Citation, GroundedResponse)
+│   │   │   ├── prompts.py      # Prompt versioning (PROMPT_V1, PROMPT_V2)
+│   │   │   └── verifier.py     # Quote verification & threshold fast refusal
+│   │   ├── query/              # Pre-retrieval intelligence package
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py         # QueryTransform abstract base class
+│   │   │   ├── multi_query.py  # Multi-Query rephrasings
+│   │   │   ├── hyde.py         # Hypothetical Document Embeddings
+│   │   │   ├── step_back.py    # Step-Back conceptual prompting
+│   │   │   ├── decomposition.py# Multi-part query decomposition
+│   │   │   ├── filter_extractor.py # Pydantic automatic filter extractor & fallback
+│   │   │   └── router.py       # Intent router (direct_chat, search, decompose)
+│   │   └── security/           # Enterprise security package
+│   │       ├── __init__.py
+│   │       ├── auth.py         # JWT token creation & cryptographic verification
+│   │       ├── pii.py          # PII detection & credential masking
+│   │       └── guardrails.py   # Prompt injection defense & untrusted context framing
+│   ├── data/
+│   │   ├── index/              # Model-specific Qdrant persistent storage folders
+│   │   └── sample_docs/        # Official FastAPI Markdown tutorial files
+│   ├── eval/
+│   │   ├── questions.jsonl     # 20 gold evaluation benchmark questions
+│   │   ├── metrics.py          # Hit@k, MRR, and Abstention accuracy formulas
+│   │   ├── run_eval.py         # Automated evaluation runner with per-bucket telemetry
+│   │   └── failure_analysis.py # Diagnostic tool isolating retrieval vs. ranking failures
+│   ├── results/
+│   │   ├── day1.md             # Day 1 logbook
+│   │   ├── day2.md             # Day 2 logbook (Foundations & Chunking)
+│   │   ├── day3.md             # Day 3 logbook (Embeddings & Qdrant)
+│   │   ├── day4.md             # Day 4 logbook (Hybrid, Re-ranking & Query Rewriting)
+│   │   ├── day5.md             # Day 5 logbook (Streaming, LangGraph, Memory & Security)
+│   │   ├── ablation.md         # Official cumulative ablation table
+│   │   └── runs/               # Timestamped JSON evaluation audit reports
+│   ├── tests/
+│   │   ├── __init__.py
+│   │   └── test_security.py    # Automated security test suite (6 passed)
+│   ├── scripts/
+│   │   └── ingest_folder.py    # CLI tool to bulk-index document folders
 │   ├── .cache/                 # Persistent disk cache for embeddings and prompts
+│   ├── .env                    # Protected API keys & model configs
+│   └── requirements.txt
+├── frontend/
+│   └── app.py                  # Streamlit UI with SSE streaming, doc management, filters & citations
+├── docker-compose.yml          # Full-stack container orchestration
+└── README.mdersistent disk cache for embeddings and prompts
 │   ├── .env                    # Protected API keys & model configs
 │   └── requirements.txt
 └── frontend/

@@ -14,4 +14,6 @@
 | **Day 12** | Verified Citations & Abstention (PROMPT_V2) | 41.2% | 0.324 | 100.0% | 94.1% | 1.48s | Pydantic structured output. 100% citation validity rate & fast refusal. |
 | **Day 13** | Streaming & Polished UI v1.0 | 41.2% | 0.324 | 100.0% | 94.1% | Real-time SSE | Server-Sent Events token streaming to Streamlit. |
 | **Day 14** | LangGraph Agent with Self-Correction (CRAG) | -- | -- | 100.0% | 100.0% | Stateful | State machine with retrieval grading and query rewrite loop. |
-| **Day 15** | **Memory, Follow-Up Condensation & Self-RAG** | **--** | **--** | **100.0%** | **100.0%** | **Stateful** | **Multi-turn conversation memory (resolves pronouns) + Self-RAG answer groundedness verification.** |
+| **Day 15** | Memory, Follow-Up Condensation & Self-RAG | -- | -- | 100.0% | 100.0% | Stateful | Multi-turn conversation memory + Self-RAG answer verification. |
+| **Day 16** | Security: JWT RBAC, PII Masking & Injection Shield | -- | -- | 100.0% | 100.0% | Fast | 100% security test pass rate (5/5 in pytest). |
+| **Day 17** | **Production Hardening: Caching & Rate Limits** | **--** | **--** | **100.0%** | **100.0%** | **Instant** | **Tenant-safe disk cache (passed cache-leak test) + slowapi rate limiting (20/min).** |

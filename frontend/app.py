@@ -1,7 +1,9 @@
 import streamlit as st
 import requests
 
-BACKEND_URL = "http://localhost:8000"
+import os
+
+BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
 
 st.set_page_config(page_title="DocPilot v0.2", page_icon="📚", layout="wide")
 
