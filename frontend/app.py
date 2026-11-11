@@ -1,14 +1,17 @@
-import streamlit as st
-import requests
-
 import os
+import time
+import requests
+import streamlit as st
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
+# Fallback to localhost:8000 for local runs, or http://backend:8000 if inside Docker
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+if "backend" in BACKEND_URL and not os.path.exists("/.dockerenv"):
+    BACKEND_URL = "http://localhost:8000"
 
-st.set_page_config(page_title="DocPilot v0.2", page_icon="📚", layout="wide")
+st.set_page_config(page_title="DocPilot v2.0", page_icon="📚", layout="wide")
 
-st.title("📚 DocPilot: Technical Docs Assistant (v0.2)")
-st.caption("Restart-safe, versioned documentation assistant with document management.")
+st.title("📚 DocPilot: Technical Docs Assistant (v2.0)")
+st.caption("Autonomous, restart-safe, multi-turn documentation assistant with verified citations.")
 
 # --- SIDEBAR: Status, Doc Management & Upload ---
 with st.sidebar:
@@ -85,7 +88,6 @@ with st.sidebar:
             all_docs = docs_resp.json().get("documents", [])
             doc_options = ["All Documents"] + all_docs
             selected_doc = st.selectbox("Restrict Search to Document:", doc_options)
-            # Map "All Documents" to None
             active_doc_filter = None if selected_doc == "All Documents" else selected_doc
         else:
             active_doc_filter = None
@@ -103,11 +105,15 @@ if "messages" not in st.session_state:
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
+        if "citations" in msg and msg["citations"]:
+            st.markdown("##### 📌 Verified Quotes")
+            for c in msg["citations"]:
+                st.info(f"**Passage [{c['passage_number']}]:** \"{c['exact_quote']}\"")
         if "sources" in msg and msg["sources"]:
             with st.expander("🔍 View Retrieved Sources"):
                 for s in msg["sources"]:
                     st.markdown(
-                        f"**[{s['number']}] {s['doc']}** (Chunk ID: `{s['chunk_id']}` | Cosine Score: `{s['score']}`)"
+                        f"**[{s['number']}] {s['doc']}** (Relevance Score: `{s.get('score', 0)}`)"
                     )
                     st.code(s["text"], language="markdown")
 
@@ -118,13 +124,16 @@ if user_query := st.chat_input("Ask a question about your docs..."):
     with st.chat_message("user"):
         st.markdown(user_query)
 
-    # 2. Stream response from FastAPI backend
+    # 2. Query backend agent
     with st.chat_message("assistant"):
+        resp_data = None
+
+        # Animated status box (closes before displaying answer)
         with st.status("🤖 Agent thinking & retrieving...", expanded=True) as status:
             status.write("🔍 Resolving follow-ups & searching Qdrant...")
-            time.sleep(0.3)
+            time.sleep(0.2)
             status.write("📊 Grading document relevance...")
-            time.sleep(0.3)
+            time.sleep(0.2)
             status.write("🛡️ Verifying citations & checking groundedness (Self-RAG)...")
 
             try:
@@ -138,36 +147,41 @@ if user_query := st.chat_input("Ask a question about your docs..."):
                     },
                     timeout=45
                 )
-                status.update(label="✅ Answer verified & grounded!", state="complete", expanded=False)
-                
                 if resp.status_code == 200:
-                    data = resp.json()
-                    answer = data.get("answer", "")
-                    sources = data.get("sources", [])
-                    citations = data.get("citations", [])
-
-                    st.markdown(answer)
-
-                    # Show verified citation pills
-                    if citations:
-                        st.markdown("**Verified Quotes:**")
-                        for c in citations:
-                            st.info(f"Passage [{c['passage_number']}]: \"{c['exact_quote']}\"")
-
-                    if sources:
-                        with st.expander("🔍 View Retrieved Sources"):
-                            for s in sources:
-                                st.markdown(f"**[{s['number']}] {s['doc']}** (Relevance Score: `{s.get('score', 0)}`)")
-                                st.code(s["text"], language="markdown")
-
-                    st.session_state.messages.append({
-                        "role": "assistant",
-                        "content": answer,
-                        "sources": sources,
-                        "citations": citations
-                    })
+                    resp_data = resp.json()
+                    status.update(label="✅ Answer verified & grounded!", state="complete", expanded=False)
                 else:
-                    st.error(f"Error ({resp.status_code}): {resp.text}")
+                    status.update(label=f"❌ Error ({resp.status_code})", state="error", expanded=False)
+                    st.error(f"API Error: {resp.text}")
             except Exception as e:
-                status.update(label="❌ Error occurred", state="error")
+                status.update(label="❌ Connection Failed", state="error", expanded=False)
                 st.error(f"Could not reach backend: {e}")
+
+        # 3. Render Answer, Quotes, and Sources OUTSIDE the status box!
+        if resp_data:
+            answer = resp_data.get("answer", "")
+            sources = resp_data.get("sources", [])
+            citations = resp_data.get("citations", [])
+
+            st.markdown(answer)
+
+            # Verified Quotes Pills
+            if citations:
+                st.markdown("##### 📌 Verified Quotes")
+                for c in citations:
+                    st.info(f"**Passage [{c['passage_number']}]:** \"{c['exact_quote']}\"")
+
+            # Retrieved Sources Accordion
+            if sources:
+                with st.expander("🔍 View Retrieved Sources"):
+                    for s in sources:
+                        st.markdown(f"**[{s['number']}] {s['doc']}** (Relevance Score: `{s.get('score', 0)}`)")
+                        st.code(s["text"], language="markdown")
+
+            # Save to conversation history
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": answer,
+                "sources": sources,
+                "citations": citations
+            })

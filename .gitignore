@@ -6,3 +6,17 @@ __pycache__/
 temp_docs/
 .env
 **/.env
+
+# Runtime caches and databases (DO NOT COMMIT)
+*.db
+*.db-shm
+*.db-wal
+.cache/
+backend/.cache/
+checkpoints/
+backend/checkpoints/
+
+# Vector storage & trained heavy model weights
+backend/data/index/
+backend/data/models/
+*.lock

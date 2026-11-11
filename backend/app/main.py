@@ -22,6 +22,7 @@ from slowapi.errors import RateLimitExceeded
 from app.infra.cache import get_cached_response, set_cached_response
 from app.infra.budget import check_token_budget, record_token_usage
 
+import time
 app = FastAPI(title="DocPilot API", version="0.1.0")
 
 limiter = Limiter(key_func=get_remote_address)

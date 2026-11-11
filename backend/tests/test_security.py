@@ -94,11 +94,16 @@ def test_cache_leak_prevention():
     set_cached_response(shared_query, tenant_a_data, tenant="engineering", role="admin")
 
     # Tenant A accesses it -> Cache Hit
-    assert get_cached_response(shared_query, tenant="engineering", role="admin") is not None
-    assert get_cached_response(shared_query, tenant="engineering", role="admin")["answer"] == "https://internal-eng.gateway.local"
+    res, match_type = get_cached_response(shared_query, tenant="engineering", role="admin")
+    assert res is not None
+    assert res["answer"] == "https://internal-eng.gateway.local"
+    assert match_type == "exact"
 
     # Tenant B (Finance) asks the EXACT same query -> Cache Miss (No cross-tenant leak!)
-    assert get_cached_response(shared_query, tenant="finance", role="admin") is None
+    res_b, _ = get_cached_response(shared_query, tenant="finance", role="admin")
+    assert res_b is None
 
     # An intern in Tenant A asks the same query -> Cache Miss (No role escalation leak!)
-    assert get_cached_response(shared_query, tenant="engineering", role="intern") is None
+    res_intern, _ = get_cached_response(shared_query, tenant="engineering", role="intern")
+    assert res_intern is None
+

@@ -13,7 +13,7 @@ prod_cache = Cache(str(CACHE_DIR))
 embedder = get_embedder("gemini")
 
 SEMANTIC_CACHE_REGISTRY_KEY = "semantic_cache_registry"
-SEMANTIC_SIMILARITY_THRESHOLD = 0.96
+SEMANTIC_SIMILARITY_THRESHOLD = 0.88
 
 
 def build_cache_key(question: str, tenant: str = "public", role: str = "all", prompt_version: str = "PROMPT_V2") -> str:

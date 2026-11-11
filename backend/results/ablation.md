@@ -17,3 +17,5 @@
 | **Day 15** | Memory, Follow-Up Condensation & Self-RAG | -- | -- | 100.0% | 100.0% | Stateful | Multi-turn conversation memory + Self-RAG answer verification. |
 | **Day 16** | Security: JWT RBAC, PII Masking & Injection Shield | -- | -- | 100.0% | 100.0% | Fast | 100% security test pass rate (5/5 in pytest). |
 | **Day 17** | **Production Hardening: Caching & Rate Limits** | **--** | **--** | **100.0%** | **100.0%** | **Instant** | **Tenant-safe disk cache (passed cache-leak test) + slowapi rate limiting (20/min).** |
+| **Day 18** | **Fine-Tuned BGE-small (MNRL on CPU)** | **47.1%** | **0.402** | **100.0%** | **94.1%** | **740ms** | **Trained in 43s on CPU with 63 triplets. MRR surged from 0.289 to 0.402 (+39% gain over base BGE).** |
+| **Day 19** | **Framework Comparison (LlamaIndex)** | **70.6%** | **0.510** | **100.0%** | **94.1%** | **586.5ms** | **Head-to-head comparison with LlamaIndex. Framework showed high recall; custom engine won on security, ACLs & verification.** |
